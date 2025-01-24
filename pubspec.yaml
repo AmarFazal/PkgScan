@@ -1,0 +1,116 @@
+name: flutter_pkgscan
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.4
+
+# Dependencies specify other packages that your package needs in order to work.
+# To automatically upgrade your package dependencies to the latest versions
+# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# dependencies can be manually updated by changing the version numbers below to
+# the latest version available on pub.dev. To see which dependencies have newer
+# versions available, run `flutter pub outdated`.
+dependencies:
+  flutter:
+    sdk: flutter
+
+
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^1.0.8
+  flutter_svg: ^2.0.14
+  google_nav_bar: ^5.0.7
+  shared_preferences: ^2.3.3
+  http: ^1.2.2
+  flutter_spinkit: ^5.2.1
+  mobile_scanner: ^6.0.2
+  camera: ^0.11.0+2
+  image_picker: ^1.1.2
+  provider: ^6.1.2
+  get: ^4.6.6
+  quiver: ^3.2.2
+  excel: ^4.0.6
+  path_provider: ^2.0.1
+  syncfusion_flutter_xlsio: ^25.1.42
+  permission_handler: ^11.3.1
+  device_info_plus: ^11.2.1
+  csv: ^6.0.0
+  photo_view: ^0.15.0
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # The "flutter_lints" package below contains a set of recommended lints to
+  # encourage good coding practices. The lint set provided by the package is
+  # activated in the `analysis_options.yaml` file located at the root of your
+  # package. See that file for information about deactivating specific lint
+  # rules and activating additional ones.
+  flutter_lints: ^4.0.0
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+
+  # To add assets to your application, add an assets section, like this:
+  assets:
+    - assets/images/
+    - assets/icons/
+
+  fonts:
+    - family: Hanken_Grotesk
+      fonts:
+        - asset: assets/fonts/Hanken_Grotesk/HankenGrotesk-Black.ttf
+          weight: 900
+        - asset: assets/fonts/Hanken_Grotesk/HankenGrotesk-BlackItalic.ttf
+          weight: 900
+          style: italic
+        - asset: assets/fonts/Hanken_Grotesk/HankenGrotesk-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Hanken_Grotesk/HankenGrotesk-BoldItalic.ttf
+          weight: 700
+          style: italic
+        - asset: assets/fonts/Hanken_Grotesk/HankenGrotesk-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/Hanken_Grotesk/HankenGrotesk-ExtraBoldItalic.ttf
+          weight: 800
+          style: italic
+        - asset: assets/fonts/Hanken_Grotesk/HankenGrotesk-ExtraLightItalic.ttf
+          weight: 200
+          style: italic
+        - asset: assets/fonts/Hanken_Grotesk/HankenGrotesk-Italic.ttf
+          style: italic
+        - asset: assets/fonts/Hanken_Grotesk/HankenGrotesk-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Hanken_Grotesk/HankenGrotesk-LightItalic.ttf
+          weight: 300
+          style: italic
+        - asset: assets/fonts/Hanken_Grotesk/HankenGrotesk-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Hanken_Grotesk/HankenGrotesk-MediumItalic.ttf
+          weight: 500
+          style: italic
+        - asset: assets/fonts/Hanken_Grotesk/HankenGrotesk-Regular.ttf
+        - asset: assets/fonts/Hanken_Grotesk/HankenGrotesk-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Hanken_Grotesk/HankenGrotesk-SemiBoldItalic.ttf
+          weight: 600
+          style: italic
+        - asset: assets/fonts/Hanken_Grotesk/HankenGrotesk-Thin.ttf
+          weight: 100
+        - asset: assets/fonts/Hanken_Grotesk/HankenGrotesk-ThinItalic.ttf
+          weight: 100
+          style: italic
+  #
+  # For details regarding fonts from package dependencies,
+  # see https://flutter.dev/to/font-from-package
