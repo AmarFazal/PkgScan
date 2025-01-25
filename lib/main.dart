@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_pkgscan/screens/auth/forgot_password_screen.dart';
 import 'package:flutter_pkgscan/screens/auth/signup_screen.dart';
@@ -6,12 +5,9 @@ import 'package:flutter_pkgscan/screens/auth/signup_with_screen.dart';
 import 'package:flutter_pkgscan/screens/manifests_screen.dart';
 import 'package:flutter_pkgscan/screens/menu_screen.dart';
 import 'package:flutter_pkgscan/screens/tutorials_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'constants/app_colors.dart';
 import 'screens/account_screen.dart';
 import 'screens/auth/signin_screen.dart';
-import 'screens/library_screen.dart';
 import 'services/auth_service.dart';
 import 'widgets/bottom_nav_bar.dart';
 
@@ -118,6 +114,8 @@ class MyApp extends StatelessWidget {
 }
 
 class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
+
   @override
   _MainScreenState createState() => _MainScreenState();
 }

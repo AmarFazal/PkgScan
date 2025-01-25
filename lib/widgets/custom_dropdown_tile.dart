@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../constants/app_colors.dart';
 
 class CustomDropdownTile extends StatefulWidget {
@@ -23,7 +22,16 @@ class CustomDropdownTile extends StatefulWidget {
 class _CustomDropdownTileState extends State<CustomDropdownTile> {
   final LayerLink _layerLink = LayerLink();
   OverlayEntry? _dropdownOverlay;
-  final List<String> _selectedValues = [];
+  late List<String> _selectedValues;
+
+  @override
+  void initState() {
+    super.initState();
+    // Controller'daki değeri ayarla
+    _selectedValues = widget.controller.text.isNotEmpty
+        ? widget.controller.text.split(", ")
+        : [];
+  }
 
   void _toggleDropdown() {
     if (_dropdownOverlay == null) {
@@ -59,67 +67,66 @@ class _CustomDropdownTileState extends State<CustomDropdownTile> {
                 color: Colors.transparent, // Tıklamayı algılamak için bir arka plan
               ),
             ),
-
             Positioned(
-            left: offset.dx,
-            bottom: MediaQuery.of(context).size.height - offset.dy,
-            width: size.width,
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 5,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                constraints: const BoxConstraints(maxHeight: 300),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: widget.options.map((option) {
-                      return StatefulBuilder(
-                        builder: (context, setState) {
-                          return Row(
-                            children: [
-                              Checkbox(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(60),
+              left: offset.dx,
+              bottom: MediaQuery.of(context).size.height - offset.dy,
+              width: size.width,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 5,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  constraints: const BoxConstraints(maxHeight: 300),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: widget.options.map((option) {
+                        return StatefulBuilder(
+                          builder: (context, setState) {
+                            return Row(
+                              children: [
+                                Checkbox(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(60),
+                                  ),
+                                  value: _selectedValues.contains(option),
+                                  onChanged: (bool? isChecked) {
+                                    setState(() {});
+                                    this.setState(() {
+                                      if (isChecked == true) {
+                                        _selectedValues.add(option);
+                                      } else {
+                                        _selectedValues.remove(option);
+                                      }
+                                      widget.controller.text =
+                                          _selectedValues.join(", ");
+                                    });
+                                  },
                                 ),
-                                value: _selectedValues.contains(option),
-                                onChanged: (bool? isChecked) {
-                                  setState(() {});
-                                  this.setState(() {
-                                    if (isChecked == true) {
-                                      _selectedValues.add(option);
-                                    } else {
-                                      _selectedValues.remove(option);
-                                    }
-                                    widget.controller.text =
-                                        _selectedValues.join(", ");
-                                  });
-                                },
-                              ),
-                              Text(
-                                option,
-                                style: Theme.of(context).textTheme.displayMedium,
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    }).toList(),
+                                Text(
+                                  option,
+                                  style: Theme.of(context).textTheme.displayMedium,
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      }).toList(),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),]
-
+          ],
         );
       },
     );
@@ -162,7 +169,7 @@ class _CustomDropdownTileState extends State<CustomDropdownTile> {
                         softWrap: true,
                         overflow: TextOverflow.ellipsis,
                         style:
-                            Theme.of(context).textTheme.displayMedium?.copyWith(),
+                        Theme.of(context).textTheme.displayMedium?.copyWith(),
                       ),
                     ],
                   ),

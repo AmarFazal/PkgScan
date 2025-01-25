@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_pkgscan/services/entities_service.dart';
 import 'package:flutter_pkgscan/widgets/custom_center_title_button.dart';
@@ -6,12 +8,15 @@ import 'package:flutter_pkgscan/widgets/dialogs/save_record_dialog.dart';
 import 'package:flutter_pkgscan/widgets/entries_checkbox.dart';
 import 'package:flutter_pkgscan/widgets/entries_image_container.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:permission_handler/permission_handler.dart';
+
 import '../../widgets/header_icon.dart';
 import '../constants/app_colors.dart';
 import '../constants/text_constants.dart';
 import '../services/record_service.dart';
 import '../widgets/custom_fields.dart';
 import '../widgets/expandable_widget.dart';
+import '../widgets/scrape_status_tile.dart';
 
 class RecordScreen extends StatefulWidget {
   final String entitiesId;
@@ -19,12 +24,7 @@ class RecordScreen extends StatefulWidget {
   final int index;
   final bool isNew;
 
-  const RecordScreen(
-      {super.key,
-      required this.isNew,
-      required this.entitiesId,
-      required this.recordId,
-      required this.index});
+  const RecordScreen({super.key, required this.isNew, required this.entitiesId, required this.recordId, required this.index});
 
   @override
   State<RecordScreen> createState() => _RecordScreenState();
@@ -45,8 +45,7 @@ class _RecordScreenState extends State<RecordScreen> {
   List<bool> isExpandedList = [];
   List<Map<String, String>> combinedList = [];
   Map<String, TextEditingController> _controllers = {};
-
-  // String? imageUrl = '';
+  String? imageUrl = '';
   Map<String, dynamic> oldValues = {};
   Map<String, bool> dynamicBooleans = {}; // Dinamik boolean değerlerini saklar
   Map<String, dynamic> oldBooleanValues = {};
@@ -65,7 +64,7 @@ class _RecordScreenState extends State<RecordScreen> {
 
   // Method to handle sending updated data
   void sendUpdatedData(String key, Map<String, dynamic> newValue) {
-    debugPrint("Updated Key: $key, New Value: $newValue");
+    // log("Updated Key: $key, New Value: $newValue");
     RecordService()
         .updateRecord(context, widget.entitiesId, key, newValue, oldValues);
   }
@@ -91,7 +90,6 @@ class _RecordScreenState extends State<RecordScreen> {
     }
   }
 
-  // Method to check if there are changes
   void checkImageForChanges(String key, Map<String, dynamic> newValue) {
     if (oldImageValues[key] != null && oldImageValues[key] != newValue) {
       debugPrint("Boolean New Value: $newValue");
@@ -118,15 +116,19 @@ class _RecordScreenState extends State<RecordScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Data saved successfully!")),
     );
+    Navigator.pop(context);
   }
 
   Future<void> _fetchRecordData() async {
-    final data = await RecordService()
-        .retrieveRecords(context, widget.entitiesId ?? 'Somethings went wrong');
+    final data = await RecordService().retrieveRecords(
+        context, widget.entitiesId ?? 'Somethings went wrong', '');
     final record = data[0]['records'][widget.index];
     setState(() {
       if (data != null) {
         allRecords = record;
+
+        imageUrl = record["data"]['Pulled Images'] ?? '';
+
         // Dinamik olarak controller'ları oluştur
         record['data'].forEach((key, value) {
           if (!_controllers.containsKey(key)) {
@@ -152,6 +154,8 @@ class _RecordScreenState extends State<RecordScreen> {
           }
         });
 
+
+
         record['data'].forEach((key, value) {
           if (!imageValues.containsKey(key)) {
             // String değeri bool'a dönüştürmek için kontrol
@@ -162,7 +166,7 @@ class _RecordScreenState extends State<RecordScreen> {
               imageValues[key] = "";
             }
             imageValues[key] =
-                value is String ? value : value?.toString() ?? '';
+            value is String ? value : value?.toString() ?? '';
           }
         });
 
@@ -243,6 +247,7 @@ class _RecordScreenState extends State<RecordScreen> {
   }
 
   bool _hasUnsavedChanges() {
+    log("${_controllers.keys}");
     for (var key in _controllers.keys) {
       if (_controllers[key]?.text != oldValues[key]) {
         return true; // Bir değişiklik varsa true döner
@@ -350,7 +355,10 @@ class _RecordScreenState extends State<RecordScreen> {
                                 },
                                 children: entity!['groupedAttributes'][header]
                                     .map<Widget>((attribute) {
-                                  return buildAttributeWidget(attribute);
+                                  return buildAttributeWidget(
+                                    attribute,
+                                    () {},
+                                  );
                                 }).toList(),
                                 context: context,
                               );
@@ -366,7 +374,23 @@ class _RecordScreenState extends State<RecordScreen> {
                                 },
                                 children: entity!['groupedAttributes'][header]
                                     .map<Widget>((attribute) {
-                                  return buildAttributeWidget(attribute);
+                                  return buildAttributeWidget(
+                                    attribute,
+                                    () {
+                                      setState(() {
+                                        _controllers.forEach((key, controller) {
+                                          if (key == attribute['name']) {
+                                            _controllers
+                                                .remove(key);
+                                            log("cont$key ${controller.text}");
+                                          }
+                                        });
+                                        entity!['groupedAttributes'][header]
+                                            .remove(attribute);
+                                        log("Attribute removed: $attribute");
+                                      });
+                                    },
+                                  );
                                 }).toList(),
                                 context: context,
                               );
@@ -413,6 +437,9 @@ class _RecordScreenState extends State<RecordScreen> {
                                         EntriesImageContainer(
                                           label: TextConstants.onlineImage,
                                           imageUrl: listing['image']!,
+                                          onDelete: () {
+                                            log("listin image");
+                                          },
                                         ),
                                       if (listing['msrp'] != null &&
                                           listing['msrp']!.isNotEmpty)
@@ -444,8 +471,7 @@ class _RecordScreenState extends State<RecordScreen> {
                                               _controllers['MSRP']?.text =
                                                   combinedList[index]['msrp'] ??
                                                       '';
-                                              imageValues[
-                                                  'name'] = combinedList[index]
+                                              imageUrl = combinedList[index]
                                                       ['image'] ??
                                                   ''; // pulled listing'deki image URL'sini güncelle
                                             }
@@ -469,7 +495,10 @@ class _RecordScreenState extends State<RecordScreen> {
                                 },
                                 children: entity!['groupedAttributes'][header]
                                     .map<Widget>((attribute) {
-                                  return buildAttributeWidget(attribute);
+                                  return buildAttributeWidget(
+                                    attribute,
+                                    () {},
+                                  );
                                 }).toList(),
                                 context: context,
                               );
@@ -485,7 +514,10 @@ class _RecordScreenState extends State<RecordScreen> {
                                 },
                                 children: entity!['groupedAttributes'][header]
                                     .map<Widget>((attribute) {
-                                  return buildAttributeWidget(attribute);
+                                  return buildAttributeWidget(
+                                    attribute,
+                                    () {},
+                                  );
                                 }).toList(),
                                 context: context,
                               );
@@ -505,7 +537,8 @@ class _RecordScreenState extends State<RecordScreen> {
   }
 
   // Updated buildAttributeWidget to use controllers
-  Widget buildAttributeWidget(Map<String, dynamic> attribute) {
+  Widget buildAttributeWidget(
+      Map<String, dynamic> attribute, VoidCallback? onDelete) {
     String attributeName = attribute['name'];
 
     // Eğer controller zaten varsa, mevcut controller'ı kullan
@@ -513,7 +546,7 @@ class _RecordScreenState extends State<RecordScreen> {
       _controllers[attributeName] = TextEditingController();
     } else if (!dynamicBooleans.containsKey(attributeName)) {
       dynamicBooleans[attributeName] = true;
-    } else if (!imageValues.containsKey(attributeName)) {
+    }else if (!imageValues.containsKey(attributeName)) {
       imageValues[attributeName] = true;
     }
 
@@ -530,15 +563,28 @@ class _RecordScreenState extends State<RecordScreen> {
           textInputType: TextInputType.number,
         );
       case 'single_choice':
-        return CustomDropdownTileSingle(
-          label: attributeName,
-          title: _controllers[attributeName]!.text,
-          options:
-              attribute['options'] != null && attribute['options'].isNotEmpty
-                  ? attribute['options']
-                  : TextConstants.emptyList,
-          controller: _controllers[attributeName]!,
-        );
+         if(attributeName == "Scrape Status"){
+          return EntriesScrapeStatusTile(
+            label: attributeName,
+            title: _controllers[attributeName]!.text,
+            options:
+            attribute['options'] != null && attribute['options'].isNotEmpty
+                ? attribute['options']
+                : TextConstants.emptyList,
+            controller: _controllers[attributeName]!,
+          );
+        }else{
+           return CustomDropdownTileSingle(
+            label: attributeName,
+            title: _controllers[attributeName]!.text,
+            options:
+            attribute['options'] != null && attribute['options'].isNotEmpty
+                ? attribute['options']
+                : TextConstants.emptyList,
+            controller: _controllers[attributeName]!,
+          );
+
+        }
       case 'boolean':
         return EntriesCheckbox(
           isChecked: dynamicBooleans[attributeName] ?? false,
@@ -552,14 +598,16 @@ class _RecordScreenState extends State<RecordScreen> {
           },
         );
       case 'image':
-        return imageValues[attributeName] != ""
-            ? EntriesImageContainer(
-                label: attributeName,
-                imageUrl: imageValues[attributeName] != null
-                    ? imageValues[attributeName]
-                    : '',
-              )
-            : SizedBox();
+        if (imageValues[attributeName] is String && imageValues[attributeName]!.isNotEmpty) {
+          return EntriesImageContainer(
+            label: attributeName,
+            imageUrl: imageValues[attributeName] ?? '',
+            onDelete: () { },
+          );
+        } else {
+          return SizedBox();
+        }
+
 
       case 'richtext':
       case 'hyperlink':

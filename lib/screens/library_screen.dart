@@ -1,17 +1,18 @@
+import 'dart:developer';
 import 'dart:io';
 
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_pkgscan/screens/create_record_screen.dart';
 import 'package:flutter_pkgscan/screens/record_screen.dart';
 import 'package:flutter_pkgscan/services/record_service.dart';
+import 'package:flutter_pkgscan/widgets/dialogs/libraries_export_sheet.dart';
 import 'package:flutter_pkgscan/widgets/table_tile.dart';
 import '../../widgets/custom_search_bar.dart';
 import '../../widgets/header_icon.dart';
 import '../constants/app_colors.dart';
 import '../constants/text_constants.dart';
 import '../services/entities_service.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'package:syncfusion_flutter_xlsio/xlsio.dart' as xls;
@@ -22,7 +23,6 @@ import '../widgets/dialogs/camera_search_dialog.dart';
 import '../widgets/dialogs/libraries_settings_sheet.dart';
 import '../widgets/dialogs/text_search_dialog.dart';
 import '../widgets/screen_loading.dart';
-import '../widgets/snack_bar.dart';
 
 class LibraryScreen extends StatefulWidget {
   final String? manifestId;
@@ -49,13 +49,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
   List allRecords = []; // Manifest listesi
   bool isLoading = true; // Yüklenme durumu
   bool isDeleting = false;
+  Map<String, dynamic> localSettings = {};
 
   @override
   void initState() {
     super.initState();
-    requestStoragePermission(Permission.storage);
     _retrieveEntity();
-    _fetchRecords();
+    _fetchRecords('');
     _scrollHelper = ScrollListenerHelper(
       scrollController: _scrollController,
       onVisibilityChange: (isVisible) {
@@ -70,129 +70,30 @@ class _LibraryScreenState extends State<LibraryScreen> {
   @override
   void dispose() {
     _scrollHelper.dispose();
+
     super.dispose();
   }
 
-
-  Future<void> _fetchRecords() async {
-    final data = await RecordService()
-        .retrieveRecords(context, widget.entitiesId ?? 'Somethings went wrong');
-
+  Future<void> _fetchRecords(String search) async {
+    final data = await RecordService().retrieveRecords(
+        context, widget.entitiesId ?? 'Somethings went wrong', search);
+    log("$data");
     setState(() {
-      if (data != null && data.isNotEmpty) { // Verilerin boş olmadığından emin ol
+      if (data != null && data.isNotEmpty) {
+        // Verilerin boş olmadığından emin ol
         allRecords = data[0]['records']; // Eğer veri varsa, devam et
-
-
       } else {
+        allRecords = [];
       }
       isLoading = false; // Yükleme durumu kapat
     });
   }
 
-  Future<bool> requestStoragePermission(Permission permission) async {
-    AndroidDeviceInfo build = await DeviceInfoPlugin().androidInfo;
-    if (build.version.sdkInt>=30) {
-      var re = await Permission.manageExternalStorage.request();
-      if (re.isGranted) {
-        return true;
-      }
-      else{
-        return false;
-      }
-    } else {
-      if(await permission.isGranted){
-        return true;
-      }
-      else{
-        var result = await permission.request();
-        if(result.isGranted){
-          return true;
-        }
-        else{
-          return false;
-        }
-      }
-    }
-  }
-
-
-
-  Future<void> exportToExcel(BuildContext context, List records) async {
-    if (records.isEmpty) {
-      print('No records to export');
-      return; // Boş liste olduğu için fonksiyonu sonlandırıyoruz
-    }
-
-    final xls.Workbook workbook = xls.Workbook();
-    final xls.Worksheet sheet = workbook.worksheets[0];
-
-    // Başlıkları ekleme
-    List<String> headers = records.first.keys.toList(); // Bu satır artık hata vermez
-    for (int i = 0; i < headers.length; i++) {
-      sheet.getRangeByIndex(1, i + 1).setText(headers[i]);
-    }
-
-    // Verileri ekleme
-    for (int rowIndex = 0; rowIndex < records.length; rowIndex++) {
-      var record = records[rowIndex];
-      for (int colIndex = 0; colIndex < headers.length; colIndex++) {
-        var value = record[headers[colIndex]];
-
-        if (value is String) {
-          sheet.getRangeByIndex(rowIndex + 2, colIndex + 1).setText(value);
-        } else if (value is int) {
-          sheet.getRangeByIndex(rowIndex + 2, colIndex + 1).setNumber(value.toDouble()); // int'i double'a çeviriyoruz
-        } else if (value is double) {
-          sheet.getRangeByIndex(rowIndex + 2, colIndex + 1).setNumber(value);
-        } else {
-          sheet.getRangeByIndex(rowIndex + 2, colIndex + 1).setText('');
-        }
-      }
-    }
-
-    // Dosya kaydetmeden önce izinler kontrol edilmesi gerekebilir
-    if (await Permission.storage.request().isGranted) {
-      Directory? directory;
-      if (Platform.isAndroid) {
-        if (Platform.version.contains("11") || Platform.version.contains("12") || Platform.version.contains("13")) {
-          // Android 11 ve üzeri: Scoped Storage
-          directory = Directory('/storage/emulated/0/Documents');
-        } else {
-          // Android 10 ve altı
-          directory = await getExternalStorageDirectory();
-        }
-      } else {
-        directory = await getApplicationDocumentsDirectory();
-      }
-
-      // Eğer dizin yoksa oluştur
-      if (directory != null && !(await directory.exists())) {
-        await directory.create(recursive: true);
-      }
-
-      String path = directory!.path;
-      String fileName = 'records.xlsx';
-      File file = File('$path/$fileName');
-
-      // Dosyayı kaydetme
-      final List<int> bytes = workbook.saveAsStream();
-      await file.writeAsBytes(bytes);
-      showSnackBar(context, 'Excel file saved to $fileName');
-    } else {
-      showSnackBar(context, 'Storage permission is not granted');
-    }
-
-    // Workbook'u serbest bırakma
-    workbook.dispose();
-  }
-
-
   Future<void> _retrieveEntity() async {
-    entity =
-        await _entitiesService.retrieveEntities(context, widget.entitiesId);
+    entity = await _entitiesService.retrieveEntities(context, widget.entitiesId);
     if (entity != null) {
-      // debugPrint('Entity retrieved: ${entity?['subheaderOrder']}');
-      setState(() {}); // Arayüzü güncellemek için
+      localSettings = entity!['manifest_settings'];
+      print(localSettings);
     } else {
       debugPrint('Failed to retrieve entity.');
     }
@@ -244,8 +145,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
           HeaderIcon(
             icon: Icons.file_open_rounded,
             onTap: () {
-              List allData = allRecords.map((record) => record['data']).toList();
-              exportToExcel(context, allData);
+              List allData =
+                  allRecords.map((record) => record['data']).toList();
+              showLibrariesExportSheet(context, allData[0], allData);
               // searchedManifests = allRecords.where((record) {
               //   final name = manifest["name"]?.toString().toLowerCase() ?? '';
               //   return name.contains(trimmedQuery);
@@ -253,11 +155,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
             },
           ),
           const SizedBox(width: 16),
-          // HeaderIcon(
-          //   icon: Icons.settings,
-          //   onTap: () =>
-          //       showLibrariesSettingsSheet(context, TextEditingController()),
-          // ),
+          HeaderIcon(
+            icon: Icons.settings,
+            onTap: () {
+              List allData = allRecords.map((record) => record['data']).toList();
+              showLibrariesSettingsSheet(
+                context,
+                TextEditingController(),
+                allData[0],
+                widget.entitiesId ?? '', false,
+              );
+            },
+          ),
         ],
       ),
     ];
@@ -267,6 +176,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return Column(
       children: [
         _buildSearchBar(), // Custom search bar'ı burada çağırıyoruz
+        SizedBox(height: 10),
         _buildContentList(), // ListView'ı burada çağırıyoruz
       ],
     );
@@ -283,7 +193,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
           duration: const Duration(milliseconds: 300),
           child: CustomSearchBar(
             controller: _searchController,
-            onTap: () {},
+            onTap: () {
+              _fetchRecords(_searchController.text.trim());
+            },
+            onClear: () {
+              _fetchRecords('');
+              setState(() {
+                _searchController.text = '';
+              });
+            },
           ), // Search bar widget'ı burada
         ),
       ),
@@ -337,7 +255,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
           controller: _scrollController,
           itemCount: allRecords.length, // Liste boyutuna göre öğe sayısı
           itemBuilder: (context, index) {
-            final record = allRecords[index]; // İlk düzeydeki 'records' listesine erişim
+            final record =
+                allRecords[index]; // İlk düzeydeki 'records' listesine erişim
             final data = record['data']; // İlgili 'data' kısmına erişim
             return GestureDetector(
               onTap: () {
@@ -366,8 +285,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     context,
                     allRecords[index]['_id'],
                     allRecords[index]['entity_id'],
-                        () {
-                      _fetchRecords();
+                    () {
+                      _fetchRecords('');
                     },
                   );
                 },
@@ -378,7 +297,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
       ),
     );
   }
-
 
   Widget buildBottomNavigationBar() {
     return Container(
@@ -402,14 +320,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
             const Spacer(),
             HeaderIcon(
-              onTap: () => showTextSearchDialog(context, widget.entitiesId ?? 'Something went wrong'),
+              onTap: () => showTextSearchDialog(
+                  context, widget.entitiesId ?? 'Something went wrong'),
               letter: "A",
               letterSize: 18,
               color: AppColors.secondaryColor,
             ),
             const SizedBox(width: 8),
             HeaderIcon(
-              onTap: () => showCameraDialog(context, widget.entitiesId!),
+              onTap: () => showCameraDialog(context, widget.entitiesId ?? 'Something went wrong'),
               icon: Icons.remove_red_eye,
               iconSize: 18,
               color: AppColors.secondaryColor,
@@ -428,11 +347,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => RecordScreen(
+                    builder: (context) => CreateRecordScreen(
                       entitiesId: widget.entitiesId ?? 'Something went wrong',
-                      isNew: true,
-                      recordId: '',
-                      index: 1,
                     ),
                   ),
                 );
@@ -455,5 +371,4 @@ class _LibraryScreenState extends State<LibraryScreen> {
       bottomNavigationBar: buildBottomNavigationBar(),
     );
   }
-
 }

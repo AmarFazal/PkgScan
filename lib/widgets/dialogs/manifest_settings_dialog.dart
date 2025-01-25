@@ -140,7 +140,7 @@ void showEditManifestDialog(BuildContext context, String manifestId,
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                 ),
               ),
-              const SizedBox(height: 20),
+              // const SizedBox(height: 20),
               // İptal ve Ekle butonları
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

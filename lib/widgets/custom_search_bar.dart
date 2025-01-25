@@ -7,30 +7,61 @@ class CustomSearchBar extends StatelessWidget {
   final TextEditingController controller;
   final VoidCallback onTap;
   final ValueChanged? onChange;
-
+  final VoidCallback onClear;
 
   const CustomSearchBar({
-    Key? key,
-    required this.controller, required this.onTap, this.onChange,
-  }) : super(key: key);
+    super.key,
+    required this.controller,
+    required this.onTap,
+    this.onChange,
+    required this.onClear,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      onChanged: onChange,
-      decoration: InputDecoration(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-        filled: true,
-        fillColor: AppColors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            onChanged: onChange,
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+              filled: true,
+              fillColor: AppColors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+              hintText: TextConstants.search,
+              labelStyle: const TextStyle(color: AppColors.primaryColor),
+              suffixIcon: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Wrap(
+                  runAlignment: WrapAlignment.center,
+                  children: [
+                    GestureDetector(
+                      onTap: onTap,
+                      child: const Padding(
+                        padding: EdgeInsets.all(5),
+                        child: Icon(Icons.search, color: AppColors.primaryColor),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: onClear,
+                      child: const Padding(
+                        padding: EdgeInsets.all(5),
+                        child: Icon(Icons.close, color: AppColors.primaryColor),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            ),
+          ),
         ),
-        hintText: TextConstants.search,
-        labelStyle: const TextStyle(color: AppColors.primaryColor),
-        suffixIcon: GestureDetector(onTap: onTap, child: const Icon(Icons.search, color: AppColors.primaryColor)),
-      ),
+      ],
     );
   }
 }

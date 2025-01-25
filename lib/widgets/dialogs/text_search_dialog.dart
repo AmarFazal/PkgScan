@@ -31,11 +31,11 @@ void showTextSearchDialog(BuildContext context,String entityId) {
                 controller: searchController,
                 textInputType: TextInputType.text,
               ),
-              // CustomFieldWithoutIcon(
-              //   label: TextConstants.howMuchProductWillBePulled,
-              //   controller: pullingCountController,
-              //   textInputType: TextInputType.number,
-              // ),
+              CustomFieldWithoutIcon(
+                label: TextConstants.howMuchProductWillBePulled,
+                controller: pullingCountController,
+                textInputType: TextInputType.number,
+              ),
               SizedBox(
                 width: MediaQuery.of(context).size.width*0.4,
                 child: AuthButton(title: TextConstants.search, onTap: () {

@@ -1,4 +1,6 @@
+import 'dart:developer';
 import 'dart:io';
+import 'package:flutter_pkgscan/services/entities_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_pkgscan/services/manifest_service.dart';
 import 'package:flutter/material.dart';
@@ -17,7 +19,7 @@ import '../widgets/header_icon.dart';
 import '../widgets/manifests_tile.dart';
 import '../widgets/screen_loading.dart';
 import 'library_screen.dart';
-
+import 'package:syncfusion_flutter_xlsio/xlsio.dart' as xls;
 
 class ManifestsScreen extends StatefulWidget {
   const ManifestsScreen({super.key});
@@ -39,6 +41,9 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
   Map<int, IconData?> selectedIcons = {};
   List<Map<String, dynamic>> allRecords = []; // Manifest listesi
   Map<String, dynamic>? entity;
+  final EntitiesService _entitiesService = EntitiesService();
+
+  late Map<String, bool> checkboxStates;
 
   @override
   void initState() {
@@ -53,6 +58,11 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
     );
     _scrollHelper.addListener();
     fetchManifestsAndUpdate(); // Veriyi çekip listeyi güncelle
+
+    // checkboxStates = widget.data.keys.fold<Map<String, bool>>({}, (map, key) {
+    //   map[key] = false;
+    //   return map;
+    // });
   }
 
   // Manifest verilerini çekip listeyi güncelleme fonksiyonu
@@ -66,10 +76,29 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
     });
   }
 
+  //   Future<void> _retrieveEntity() async {
+  //   entity =
+  //       await _entitiesService.retrieveEntities(context, widget.entitiesId);
+  //   if (entity != null) {
+  //     // debugPrint('Entity retrieved: ${entity?['subheaderOrder']}');
+  //     setState(() {}); // Arayüzü güncellemek için
+  //   } else {
+  //     debugPrint('Failed to retrieve entity.');
+  //   }
+  // }
 
+  // Future<void> _fetchRecords() async {
+  //   final data = await RecordService()
+  //       .retrieveRecords(context, widget.entitiesId ?? 'Somethings went wrong');
 
-
-
+  //   setState(() {
+  //     if (data != null && data.isNotEmpty) {
+  //       // Verilerin boş olmadığından emin ol
+  //       allRecords = data[0]['records']; // Eğer veri varsa, devam et
+  //     } else {}
+  //     isLoading = false; // Yükleme durumu kapat
+  //   });
+  // }
 
   @override
   void dispose() {
@@ -135,15 +164,10 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
         },
       ),
       const SizedBox(width: 16),
-      // HeaderIcon(
-      //     icon: Icons.settings_outlined,
-      //     onTap: () =>
-      //         showLibrariesSettingsSheet(
-      //           context,
-      //
-      //
-      //
-      //         )),
+      HeaderIcon(
+          icon: Icons.settings_outlined,
+          onTap: () => showLibrariesSettingsSheet(
+              context, TextEditingController(), {}, '', true)),
     ];
   }
 
@@ -155,7 +179,7 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
           child: Column(
             children: [
               _buildSearchBar(),
-              //_buildUserData(),
+              // _buildUserData(),
             ],
           ),
         ),
@@ -189,6 +213,12 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
           controller: _searchController,
           onTap: () => _filterManifests(_searchController.text),
           onChange: (value) => _filterManifests(_searchController.text),
+          onClear: () {
+            _filterManifests('');
+            setState(() {
+              _searchController.text = '';
+            });
+          },
         ),
       ),
     );
@@ -346,8 +376,8 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
                         fetchManifestsAndUpdate();
                       },
                     );
-                  }, onTapExport: () {
                   },
+                  onTapExport: () {},
                 );
               },
             );

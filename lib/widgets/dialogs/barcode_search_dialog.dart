@@ -14,7 +14,7 @@ void showBarcodeSearchDialog(BuildContext context, String entityId) {
           children: [
             // Barcode Scanner widget'ını burada kullanıyoruz
             SizedBox(
-              height: MediaQuery.of(context).size.height * 0.9,
+              height: MediaQuery.of(context).size.height * 0.8,
               // Barcode scanner'ın boyutunu ayarlayabilirsiniz
               child: ClipRRect(
                 borderRadius:

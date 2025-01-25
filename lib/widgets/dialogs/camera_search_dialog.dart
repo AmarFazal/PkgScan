@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../camera_screen.dart';
-import '../../services/camera_service.dart';
+
+import '../../screens/camera_screen.dart';
 
 void showCameraDialog(BuildContext context, String entityId) {
   showModalBottomSheet(

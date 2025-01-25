@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -27,7 +28,7 @@ class EntitiesService {
       if (response.statusCode == 200) {
         // JSON'u çöz ve entity kısmını çıkar
         final Map<String, dynamic> data =
-        jsonDecode(response.body) as Map<String, dynamic>;
+            jsonDecode(response.body) as Map<String, dynamic>;
         final entity = data['entity'] as Map<String, dynamic>;
 
         return entity; // Veriyi döndür
@@ -40,54 +41,42 @@ class EntitiesService {
     return null;
   }
 
-  Future<List<Map<String, dynamic>>> editEntity(BuildContext context, String entityId, Map<String, dynamic> updatingData,) async {
-    final String? accessToken = await AuthService().getValidAccessToken();
-
-    if (accessToken == null) {
-      showSnackBar(context, 'Access token not found. Please log in again.');
-      return [];
-    }
-
+  Future<Map<String, dynamic>?> updateEntities(
+      BuildContext context, String? entityId, Map<String, dynamic> body) async {
     try {
-      // PUT isteği yapılıyor
+      final String? accessToken = await AuthService().getValidAccessToken();
+      if (accessToken == null) {
+        showSnackBar(context, 'Access token not found. Please log in again.');
+        return null;
+      }
+
       final response = await http.put(
         Uri.parse('${AppConfig.entitiesUrl}/update-entity/$entityId'),
+        body: jsonEncode({
+          "manifest_settings": body
+        }),
+
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $accessToken'
+          'Authorization': 'Bearer $accessToken',
         },
-        body: jsonEncode({
-          "data": updatingData,
-        }),
       );
-
-      final data = jsonDecode(response.body);
-
+      // log("update entities ${response.body}");
       if (response.statusCode == 200) {
-        // Başarı mesajını göster
-        final successMessage = data['message'] ?? 'Edit successful!';
+        // JSON'u çöz ve entity kısmını çıkar
+        final Map<String, dynamic> data =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        final entity = data['entity'] as Map<String, dynamic>;
+        final successMessage = data['message'] ?? 'Entity updated successfully.';
         showSnackBar(context, successMessage);
 
-        // Eğer data bir listeyse, listeye dönüştür
-        if (data is List) {
-          return List<Map<String, dynamic>>.from(data);
-        } else if (data is Map) {
-          return [
-            data.cast<String, dynamic>()
-          ]; // Map<String, dynamic> olarak dönüştür
-        } else {
-          showSnackBar(context, 'Unexpected response format.');
-          return [];
-        }
+        return entity; // Veriyi döndür
       } else {
-        // Hata mesajını göster
-        final errorMessage = data['message'] ?? 'An error occurred.';
-        showSnackBar(context, errorMessage);
-        return [];
+        showSnackBar(context, 'Failed to fetch manifests.');
       }
     } catch (e) {
       showSnackBar(context, 'Something went wrong: $e');
-      return [];
     }
+    return null;
   }
 }

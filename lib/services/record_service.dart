@@ -9,7 +9,8 @@ import 'auth_service.dart';
 
 class RecordService {
   // Add Record
-  Future<String?> addRecord(BuildContext context, String entityId, bool isScrape, String scrapeBy, String scrapeValue) async {
+  Future<String?> addRecord(BuildContext context, String entityId,
+      bool isScrape, String scrapeBy, String scrapeValue) async {
     final String? accessToken = await AuthService().getValidAccessToken();
 
     if (accessToken == null) {
@@ -46,7 +47,8 @@ class RecordService {
   }
 
   // Retrieve Records
-  Future retrieveRecords(BuildContext context, String entityId) async {
+  Future retrieveRecords(
+      BuildContext context, String entityId, String search) async {
     try {
       final String? accessToken = await AuthService().getValidAccessToken();
       if (accessToken == null) {
@@ -55,7 +57,9 @@ class RecordService {
       }
 
       final response = await http.get(
-        Uri.parse('${AppConfig.recordsUrl}/get/$entityId'),
+        search.isNotEmpty
+            ? Uri.parse('${AppConfig.recordsUrl}/search/$entityId?q=$search')
+            : Uri.parse('${AppConfig.recordsUrl}/get/$entityId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
@@ -68,20 +72,22 @@ class RecordService {
         return [];
       }
 
-      final data = jsonDecode(response.body);  // Cevap boş değilse devam et
+      final data = jsonDecode(response.body); // Cevap boş değilse devam et
       if (response.statusCode == 200) {
         final dynamic jsonData = data;
 
         // Gelen veri bir liste mi yoksa bir obje mi kontrol ediliyor
         if (jsonData is List) {
-          return jsonData.cast<Map<String, dynamic>>(); // Listeyse, doğru şekilde döndür
+          return jsonData
+              .cast<Map<String, dynamic>>(); // Listeyse, doğru şekilde döndür
         } else if (jsonData is Map<String, dynamic>) {
           return [jsonData]; // Obje ise, listeye sararak döndür
         } else {
           showSnackBar(context, 'Invalid data format received.');
         }
       } else {
-        showSnackBar(context, 'Failed to load records. Status code: ${response.statusCode}');
+        showSnackBar(context,
+            'Failed to load records. Status code: ${response.statusCode}');
       }
     } catch (e) {
       showSnackBar(context, 'Something went wrong: $e');
@@ -89,9 +95,9 @@ class RecordService {
     }
   }
 
-
   // Archive Records
-  Future<void> archiveRecord(BuildContext context, String recordId, String entityId, Function onSuccess) async {
+  Future<void> archiveRecord(BuildContext context, String recordId,
+      String entityId, Function onSuccess) async {
     final String? accessToken = await AuthService().getValidAccessToken();
 
     if (accessToken == null) {
@@ -121,7 +127,7 @@ class RecordService {
         showSnackBar(context, successMessage);
 
         // Callback fonksiyonu çağır
-        onSuccess();  // Callback fonksiyonu çağrılır
+        onSuccess(); // Callback fonksiyonu çağrılır
       } else {
         // Hata mesajını göster
         final errorMessage = data['message'] ?? 'An error occurred.';
@@ -139,7 +145,6 @@ class RecordService {
       String recordId,
       Map<String, dynamic> updatingData,
       Map currentData) async {
-
     final String? accessToken = await AuthService().getValidAccessToken();
 
     if (accessToken == null) {
@@ -178,7 +183,8 @@ class RecordService {
 
       // Yanıt formatını kontrol etmeden önce durumu kontrol et
       if (response.statusCode != 200) {
-        final errorMessage = jsonDecode(response.body)['message'] ?? 'An error occurred.';
+        final errorMessage =
+            jsonDecode(response.body)['message'] ?? 'An error occurred.';
         showSnackBar(context, errorMessage);
         return [];
       }
@@ -189,9 +195,7 @@ class RecordService {
       if (data is List) {
         return List<Map<String, dynamic>>.from(data);
       } else if (data is Map) {
-        return [
-          data.cast<String, dynamic>()
-        ];
+        return [data.cast<String, dynamic>()];
       } else {
         showSnackBar(context, 'Unexpected response format.');
         return [];
@@ -201,47 +205,4 @@ class RecordService {
       return [];
     }
   }
-
-
-
-// Get Record Data
-  // Future getRecordData(BuildContext context, String recordId) async {
-  //   try {
-  //     final String? accessToken = await AuthService().getValidAccessToken();
-  //     if (accessToken == null) {
-  //       showSnackBar(context, 'Access token not found. Please log in again.');
-  //       return;
-  //     }
-  //
-  //     final response = await http.get(
-  //       Uri.parse('${AppConfig.recordsUrl}/view-record/$recordId'),
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //         'Authorization': 'Bearer $accessToken',
-  //       },
-  //     );
-  //
-  //     final data = jsonDecode(response.body);
-  //     if (response.statusCode == 200) {
-  //       final dynamic jsonData = jsonDecode(response.body);
-  //       //debugPrint(response.body);
-  //       showSnackBar(context, data['message']);
-  //
-  //       // Gelen veri bir liste mi yoksa bir obje mi kontrol ediliyor
-  //       if (jsonData is List) {
-  //         return jsonData.cast<Map<String, dynamic>>(); // Listeyse, doğru şekilde döndür
-  //       } else if (jsonData is Map<String, dynamic>) {
-  //         return jsonData; // Listeye sarmadan doğrudan döndür
-  //       }
-  //       else {
-  //       showSnackBar(context, data['message']);
-  //
-  //     }
-  //     }
-  //   } catch (e) {
-  //     showSnackBar(context, 'Something went wrong: $e');
-  //     print(e);
-  //   }
-  // }
-
 }

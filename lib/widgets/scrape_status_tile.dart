@@ -4,10 +4,12 @@ import '../constants/app_colors.dart';
 
 class EntriesScrapeStatusTile extends StatefulWidget {
   final String label;
+  final String title;
   final TextEditingController controller;
+  final List<dynamic> options;
 
   EntriesScrapeStatusTile(
-      {super.key, required this.label, required this.controller});
+      {super.key, required this.label, required this.controller, required this.title, required this.options});
 
   @override
   State<EntriesScrapeStatusTile> createState() =>
@@ -49,7 +51,7 @@ class _EntriesScrapeStatusTileState extends State<EntriesScrapeStatusTile> {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    widget.controller.text,
+                    widget.title,
                     style: Theme.of(context)
                         .textTheme
                         .displaySmall
