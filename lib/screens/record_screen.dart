@@ -534,21 +534,6 @@ class _RecordScreenState extends State<RecordScreen> {
                                                 label:
                                                     TextConstants.onlineImage,
                                                 imageUrl: listing['image']!,
-                                                // Pulled Listingste olan fotoğraflar silinmemeli
-                                                onDelete: () {
-                                                  setState(() {
-                                                    oldImageValues[
-                                                            'Image $correctIndex'] =
-                                                        imageValues[
-                                                                "Image $correctIndex"] =
-                                                            listing['image'] =
-                                                                '';
-                                                    checkImageForChanges(
-                                                        "Image $correctIndex", {
-                                                      "Image $correctIndex": ''
-                                                    });
-                                                  });
-                                                },
                                                 onTapExport: () {
                                                   setState(() {
                                                     _controllers[
@@ -559,43 +544,7 @@ class _RecordScreenState extends State<RecordScreen> {
                                                             'Pulled Images'] =
                                                         listing['image'] ?? '';
                                                   });
-                                                })
-                                            : CustomCenterTitleButton(
-                                                title: "Add Image",
-                                                onTap: () async {
-                                                  final String?
-                                                      uploadedImageUrl =
-                                                      await handleImageUpload(
-                                                    context,
-                                                    widget.entitiesId,
-                                                    widget.recordId,
-                                                    'Image $correctIndex',
-                                                    oldImageValues,
-                                                    {}, // Ekstra veriler (optional)
-                                                  );
-                                                  if (uploadedImageUrl !=
-                                                      null) {
-                                                    // Image URL yüklendikten sonra oldImageValues güncellenir
-                                                    setState(() {
-                                                      imageValues[
-                                                              "Image $correctIndex"] =
-                                                          uploadedImageUrl;
-                                                    });
-
-                                                    // fetchRecordData çağrılır
-                                                    await _fetchRecordData();
-                                                  }
-                                                  listing["image"] = imageValues[
-                                                      "Image $correctIndex"]!;
-                                                  oldImageValues[
-                                                          "Image $correctIndex"] =
-                                                      imageValues[
-                                                          "Image $correctIndex"]!;
-                                                },
-                                                icon: Icons.image,
-                                                iconColor: Colors.blue,
-                                                titleColor: Colors.blue,
-                                              ),
+                                                }):const SizedBox.shrink(),
                                         CustomFieldWithoutIcon(
                                           label: TextConstants.msrp,
                                           controller: TextEditingController(
