@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../screens/camera_screen.dart';
 
-void showCameraDialog(BuildContext context, String entityId) {
-  showModalBottomSheet(
+Future<void> showCameraDialog(BuildContext context, String entityId) {
+  return showModalBottomSheet(
     isScrollControlled: true,
     context: context,
     builder: (BuildContext context) {

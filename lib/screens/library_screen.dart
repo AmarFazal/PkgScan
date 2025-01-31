@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_pkgscan/screens/create_record_screen.dart';
 import 'package:flutter_pkgscan/screens/record_screen.dart';
 import 'package:flutter_pkgscan/services/record_service.dart';
+import 'package:flutter_pkgscan/widgets/attribute_widgets.dart';
 import 'package:flutter_pkgscan/widgets/dialogs/libraries_export_sheet.dart';
+import 'package:flutter_pkgscan/widgets/snack_bar.dart';
 import 'package:flutter_pkgscan/widgets/table_tile.dart';
 import '../../widgets/custom_search_bar.dart';
 import '../../widgets/header_icon.dart';
@@ -18,10 +20,16 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart' as xls;
 import '../utils/scroll_listener_helper.dart';
 import '../utils/scroll_utils.dart';
+import '../widgets/auth_button.dart';
+import '../widgets/custom_dropdown_tile_single.dart';
+import '../widgets/custom_fields.dart';
 import '../widgets/dialogs/barcode_search_dialog.dart';
 import '../widgets/dialogs/camera_search_dialog.dart';
 import '../widgets/dialogs/libraries_settings_sheet.dart';
-import '../widgets/dialogs/text_search_dialog.dart';
+import '../widgets/dialogs/name_search_dialog.dart';
+import '../widgets/entries_checkbox.dart';
+import '../widgets/entries_image_container.dart';
+import '../widgets/scrape_status_tile.dart';
 import '../widgets/screen_loading.dart';
 
 class LibraryScreen extends StatefulWidget {
@@ -50,6 +58,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
   bool isLoading = true; // Yüklenme durumu
   bool isDeleting = false;
   Map<String, dynamic> localSettings = {};
+  Map<String, TextEditingController> _controllers = {};
+  Map<String, dynamic> oldValues = {};
+  Map<String, bool> dynamicBooleans = {}; // Dinamik boolean değerlerini saklar
+  Map<String, dynamic> oldBooleanValues = {};
+  Map<String, String> imageValues = {};
+  Map<String, dynamic> oldImageValues = {};
 
   @override
   void initState() {
@@ -70,14 +84,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
   @override
   void dispose() {
     _scrollHelper.dispose();
-
     super.dispose();
   }
 
   Future<void> _fetchRecords(String search) async {
     final data = await RecordService().retrieveRecords(
         context, widget.entitiesId ?? 'Somethings went wrong', search);
-    log("$data");
     setState(() {
       if (data != null && data.isNotEmpty) {
         // Verilerin boş olmadığından emin ol
@@ -93,9 +105,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
     entity = await _entitiesService.retrieveEntities(context, widget.entitiesId);
     if (entity != null) {
       localSettings = entity!['manifest_settings'];
-      print(localSettings);
+      debugPrint("These are The Fields in Quick Edit ${localSettings['Fields in Quick Edit']}");
     } else {
-      debugPrint('Failed to retrieve entity.');
+      showSnackBar(context, 'Failed to retrieve entity.');
     }
   }
 
@@ -145,9 +157,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
           HeaderIcon(
             icon: Icons.file_open_rounded,
             onTap: () {
-              List allData =
+              List<dynamic> allData =
                   allRecords.map((record) => record['data']).toList();
-              showLibrariesExportSheet(context, allData[0], allData);
+              List<String> allKeys = allData
+                  .where((element) =>
+                      element is Map) // Sadece Map türündeki elemanları seç
+                  .expand((element) => (element as Map).keys) // Key'leri al
+                  .cast<String>() // Türü List<String>'e dönüştür
+                  .toSet() // Tekrarlayan key'leri filtrele
+                  .toList(); // Listeye çevir
+
+              showLibrariesExportSheet(context, allKeys, allData);
+
               // searchedManifests = allRecords.where((record) {
               //   final name = manifest["name"]?.toString().toLowerCase() ?? '';
               //   return name.contains(trimmedQuery);
@@ -158,12 +179,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
           HeaderIcon(
             icon: Icons.settings,
             onTap: () {
-              List allData = allRecords.map((record) => record['data']).toList();
+              List allData =
+                  allRecords.map((record) => record['data']).toList();
               showLibrariesSettingsSheet(
                 context,
                 TextEditingController(),
                 allData[0],
-                widget.entitiesId ?? '', false,
+                widget.entitiesId ?? '',
+                false,
               );
             },
           ),
@@ -176,7 +199,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return Column(
       children: [
         _buildSearchBar(), // Custom search bar'ı burada çağırıyoruz
-        SizedBox(height: 10),
+        const SizedBox(height: 10),
         _buildContentList(), // ListView'ı burada çağırıyoruz
       ],
     );
@@ -251,48 +274,67 @@ class _LibraryScreenState extends State<LibraryScreen> {
           color: AppColors.backgroundColor,
           borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
         ),
-        child: ListView.builder(
-          controller: _scrollController,
-          itemCount: allRecords.length, // Liste boyutuna göre öğe sayısı
-          itemBuilder: (context, index) {
-            final record =
-                allRecords[index]; // İlk düzeydeki 'records' listesine erişim
-            final data = record['data']; // İlgili 'data' kısmına erişim
-            return GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => RecordScreen(
-                      index: index,
-                      entitiesId: widget.entitiesId ?? 'Something went wrong',
-                      isNew: false,
-                      recordId: record['_id'],
-                    ),
-                  ),
-                );
-              },
-              child: TableTile(
-                title: data['Title'] ?? data['Code'] ?? "No Data",
-                subtitle: data['Scrape Status'] ?? 'No Status',
-                lot: (data['MSRP'] ?? 'MSRP').toString(),
-                scrapeStatus: data['Scrape Status'] ?? 'No Status',
-                image: data["Pulled Images"] ??
-                    'https://st4.depositphotos.com/14953852/24787/v/450/depositphotos_247872612-stock-illustration-no-image-available-icon-vector.jpg',
-                isLoading: isDeleting,
-                onSwipe: () async {
-                  RecordService().archiveRecord(
+        child: RefreshIndicator(
+          onRefresh: () => _fetchRecords(""),
+          child: ListView.builder(
+            controller: _scrollController,
+            itemCount: allRecords.length, // Liste boyutuna göre öğe sayısı
+            itemBuilder: (context, index) {
+              final record =
+                  allRecords[index]; // İlk düzeydeki 'records' listesine erişim
+              final data = record['data']; // İlgili 'data' kısmına erişim
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
                     context,
-                    allRecords[index]['_id'],
-                    allRecords[index]['entity_id'],
-                    () {
-                      _fetchRecords('');
-                    },
+                    MaterialPageRoute(
+                      builder: (context) => RecordScreen(
+                        index: index,
+                        entitiesId: widget.entitiesId ?? 'Something went wrong',
+                        isNew: false,
+                        recordId: record['_id'],
+                      ),
+                    ),
                   );
                 },
-              ),
-            );
-          },
+                child: TableTile(
+                    title: data['Title'] ?? data['Code'] ?? "No Data",
+                    subtitle: data['Scrape Status'] ?? 'No Status',
+                    lot: (data['MSRP'] ?? 'MSRP').toString(),
+                    scrapeStatus: data['Scrape Status'] ?? 'No Status',
+                    image: (data["Pulled Images"]?.isEmpty ?? true)
+                        ? 'https://st4.depositphotos.com/14953852/24787/v/450/depositphotos_247872612-stock-illustration-no-image-available-icon-vector.jpg'
+                        : data["Pulled Images"],
+                    isLoading: isDeleting,
+                    onSwipe: () async {
+                      RecordService().archiveRecord(
+                        context,
+                        allRecords[index]['_id'],
+                        allRecords[index]['entity_id'],
+                        () {
+                          _fetchRecords('');
+                        },
+                      );
+                    },
+                    quickEditWidget: localSettings.isNotEmpty &&
+                            localSettings['Active Quick Edit'] == true
+                        ? GestureDetector(
+                            onTap: () {
+                              showQuickEditDialog(
+                                  context,
+                                  allRecords[index]['_id'],
+                                  widget.entitiesId ?? 'No entities Id');
+                            },
+                            child: const Icon(
+                              Icons.edit,
+                              color: AppColors.primaryColor,
+                              size: 20,
+                            ),
+                          )
+                        : const SizedBox.shrink()),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -320,23 +362,42 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
             const Spacer(),
             HeaderIcon(
-              onTap: () => showTextSearchDialog(
-                  context, widget.entitiesId ?? 'Something went wrong'),
+              onTap: () async {
+                // Text search dialog açılıyor ve kapanması bekleniyor
+                await showNameSearchDialog(
+                    context, widget.entitiesId ?? 'Something went wrong');
+
+                // Dialog kapandıktan sonra verileri tekrar fetch et
+                _fetchRecords('');
+              },
               letter: "A",
               letterSize: 18,
               color: AppColors.secondaryColor,
             ),
             const SizedBox(width: 8),
             HeaderIcon(
-              onTap: () => showCameraDialog(context, widget.entitiesId ?? 'Something went wrong'),
+              onTap: () async {
+                // Kamera dialog açılıyor ve kapanması bekleniyor
+                await showCameraDialog(
+                    context, widget.entitiesId ?? 'Something went wrong');
+
+                // Dialog kapandıktan sonra verileri tekrar fetch et
+                _fetchRecords('');
+              },
               icon: Icons.remove_red_eye,
               iconSize: 18,
               color: AppColors.secondaryColor,
             ),
             const SizedBox(width: 8),
             HeaderIcon(
-              onTap: () => showBarcodeSearchDialog(
-                  context, widget.entitiesId ?? 'Something went wrong'),
+              onTap: () async {
+                // Barcode arama dialog açılıyor ve kapanması bekleniyor
+                await showBarcodeSearchDialog(
+                    context, widget.entitiesId ?? 'Something went wrong');
+
+                // Dialog kapandıktan sonra verileri tekrar fetch et
+                _fetchRecords('');
+              },
               icon: CupertinoIcons.barcode,
               iconSize: 18,
               color: AppColors.secondaryColor,
@@ -369,6 +430,144 @@ class _LibraryScreenState extends State<LibraryScreen> {
       appBar: buildAppBar(),
       body: buildBody(),
       bottomNavigationBar: buildBottomNavigationBar(),
+    );
+  }
+
+
+
+
+
+
+
+
+
+
+  // Method to handle sending updated data
+  void sendUpdatedData(
+      String key, Map<String, dynamic> newValue, String entitiesId) {
+    RecordService().updateRecord(context, entitiesId, key, newValue, oldValues);
+  }
+
+  // Method to check if there are changes
+  void checkBooleanForChanges(String key, Map<String, dynamic> newValue,
+      String recordId, String entitiesId) {
+    if (oldBooleanValues[key] != null && oldBooleanValues[key] != newValue) {
+      RecordService().updateRecord(
+          context, entitiesId, recordId, newValue, oldBooleanValues);
+      setState(() {
+        oldBooleanValues[key] = newValue;
+      });
+    }
+  }
+
+  void saveData(String recordId, String entitiesId) {
+    // Iterate through all the controllers and collect the updated data
+    Map<String, dynamic> updatedData = {};
+
+    _controllers.forEach((key, controller) {
+      updatedData[key] =
+          controller.text; // Assuming the value is in the controller's text
+    });
+
+    // Send the updated data
+    sendUpdatedData(recordId, updatedData, entitiesId);
+    // Optionally, show a confirmation or success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Data saved successfully!")),
+    );
+    Navigator.pop(context);
+  }
+
+  Future<void> _fetchRecordData(int index) async {
+    final data = await RecordService().retrieveRecords(
+        context, widget.entitiesId ?? 'Somethings went wrong', '');
+    final record = data[0]['records'][index];
+    setState(() {
+      if (data != null) {
+        allRecords = record;
+
+        // Dinamik olarak controller'ları oluştur
+        record['data'].forEach((key, value) {
+          if (!_controllers.containsKey(key)) {
+            _controllers[key] = TextEditingController(text: value?.toString());
+            oldValues[key] = value?.toString() ?? '';
+          }
+        });
+
+        // Dinamik olarak controller'ları oluştur
+        record['data'].forEach((key, value) {
+          if (!dynamicBooleans.containsKey(key)) {
+            // String değeri bool'a dönüştürmek için kontrol
+            if (value is String) {
+              dynamicBooleans[key] = value.toLowerCase() == 'true';
+            } else if (value is bool) {
+              dynamicBooleans[key] = value;
+            } else {
+              // Eğer value ne String ne de bool ise, bir varsayılan değer kullanabilirsiniz
+              dynamicBooleans[key] = false;
+            }
+            oldBooleanValues[key] =
+                value is bool ? value : value?.toString() ?? '';
+          }
+        });
+      }
+      isLoading = false;
+    });
+  }
+
+  void showQuickEditDialog(
+    BuildContext context,
+    String recordId,
+    String entityId,
+  ) {
+    final fieldsInQuickEdit = entity!['manifest_settings']
+            ?['Fields in Quick Edit'] as List<dynamic>? ??
+        [];
+
+    showModalBottomSheet(
+      isScrollControlled: true,
+      context: context,
+      builder: (BuildContext context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16.0,
+            right: 16.0,
+            top: 16.0,
+            bottom: MediaQuery.of(context)
+                .viewInsets
+                .bottom, // Klavyeye göre padding
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 20),
+                // Dinamik alanları oluşturma
+                ...fieldsInQuickEdit.map<Widget>((field) {
+                  //print("Bu Manifestin entity içi ${entity!['groupedAttributes']["Main Information"]}");
+                  return entity!['groupedAttributes']
+                          .map<Widget>((attribute) {
+                            print("Baslangic ${entity!["groupedAttributes"]}");
+                      return AttributeWidgets.buildAttributeWidget(
+                          attribute: attribute,
+                          controllers: _controllers,
+                          dynamicBooleans: dynamicBooleans,
+                          imageValues: {},
+                          oldImageValues: oldImageValues,
+                          header: 'Main Information',
+                          entitiesId: entityId,
+                          recordId: recordId,
+                          onChanged: (p3) {},
+                          onDelete: () {},
+                          context: context);
+                    },
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

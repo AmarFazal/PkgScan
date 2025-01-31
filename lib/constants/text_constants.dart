@@ -10,6 +10,10 @@ class TextConstants {
   static const String bestAppMessage = "The best\napp for\nyour plans!";
   static const String errorMessage = "Something went wrong. Please try again.";
   static const String doYouWantToSaveChanges = "Do you want to save changes?";
+  static const String excelExportSuccessful = "Excel export successful:";
+  static const String noRecordsFoundToExport = "No records found to export";
+  static const String csvExportSuccessful = "CSV export successful:";
+  static const String storagePermitRequired = "Storage permit required.";
 
   // Diğer sabit metinler
   static const String emailOrUsername = "Email or Username";
@@ -60,6 +64,10 @@ class TextConstants {
   static const String selectAnIcon = "Select an Icon";
   static const String cancel = "Cancel";
   static const String add = "Add";
+  static const String export = "Export";
+  static const String selectAll = "Select All";
+  static const String exportAsExcel = "Export as Excel";
+  static const String exportAsCsv = "Export as CSV";
   static const String startBid = "Start Bid";
   static const String manualEntry = "Manual Entry";
   static const String description = "Description";
@@ -182,7 +190,8 @@ class TextConstants {
   static const String tableTitle = 'Bluetooth Controller';
   static const String tableSubtitle = 'Lorem ipsum dolor sit amet. Sed omnis laudantium ut';
   static const String tableTitle2 = 'ANVIZ Time Clocks for Employees Small Business CX3 Fingerprint Biometric Clock in and Out Machine - Finger Scan + RFID + Pin Punching in one, with Night Shifts, No Software Required';
-  static const String loremIpsum = 'Lorem ipsum dolor sit amet. Sed omnis laudantium ut esse doloribus At dolorem quia sed consectetur illum. A vitae repudiandae id aspernatur facere vel nobis aliquid est nihil fugit At quod distinctio nam galisum natus.';
+  static const String loremIpsum = 'Lorem ipsum dolor sit amet. nobis aliquid est nihil fugit At quod distinctio nam galisum natus.';
+  // static const String loremIpsum = 'Lorem ipsum dolor sit amet. Sed omnis laudantium ut esse doloribus At dolorem quia sed consectetur illum. A vitae repudiandae id aspernatur facere vel nobis aliquid est nihil fugit At quod distinctio nam galisum natus.';
 
 
 }

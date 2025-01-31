@@ -1,6 +1,8 @@
 import 'dart:developer';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_pkgscan/constants/text_constants.dart';
+import 'package:flutter_pkgscan/widgets/auth_button.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart' as xls;
 import 'package:csv/csv.dart';
@@ -8,10 +10,10 @@ import 'package:csv/csv.dart';
 import '../snack_bar.dart';
 
 void showLibrariesExportSheet(
-  BuildContext context,
-  Map<String, dynamic> data,
-  List<dynamic> allData,
-) {
+    BuildContext context,
+    List<String> allKeys,
+    List<dynamic> allData,
+    ) {
   showModalBottomSheet(
     isScrollControlled: true,
     context: context,
@@ -21,19 +23,20 @@ void showLibrariesExportSheet(
     backgroundColor: Colors.white,
     builder: (BuildContext context) {
       return LibrariesExportSheet(
-        data: data,
+        allKeys: allKeys,
         allData: allData,
       );
     },
   );
 }
 
+
 class LibrariesExportSheet extends StatefulWidget {
-  final Map<String, dynamic> data;
-  final List<dynamic> allData;
+  final List<String> allKeys; // Tüm benzersiz anahtarlar
+  final List<dynamic> allData; // Tüm veriler
   const LibrariesExportSheet({
     super.key,
-    required this.data,
+    required this.allKeys,
     required this.allData,
   });
 
@@ -47,7 +50,7 @@ class _LibrariesExportSheetState extends State<LibrariesExportSheet> {
   @override
   void initState() {
     super.initState();
-    checkboxStates = widget.data.keys.fold<Map<String, bool>>({}, (map, key) {
+    checkboxStates = widget.allKeys.fold<Map<String, bool>>({}, (map, key) {
       map[key] = false;
       return map;
     });
@@ -55,7 +58,7 @@ class _LibrariesExportSheetState extends State<LibrariesExportSheet> {
 
   @override
   Widget build(BuildContext context) {
-    List<String> keys = widget.data.keys.toList();
+    List<String> keys = widget.allKeys;
 
     return SizedBox(
       height: MediaQuery.of(context).size.height * 0.8,
@@ -103,10 +106,33 @@ class _LibrariesExportSheetState extends State<LibrariesExportSheet> {
                 ),
               ),
             ),
-            ElevatedButton(
-              onPressed: () => _showExportOptions(),
-              child: const Text('Tamam'),
+            Row(
+              children: [
+                Expanded(
+                  child: AuthButton(
+                    onTap: () => Navigator.pop(context),
+                    title: TextConstants.cancel,
+                  ),
+                ),
+                SizedBox(width: 10,),
+                Expanded(
+                  child: AuthButton(
+                    onTap: () {setState(() {
+                      checkboxStates.updateAll((key, value) => true);
+                    });},
+                    title: TextConstants.selectAll,
+                  ),
+                ),
+                SizedBox(width: 10,),
+                Expanded(
+                  child: AuthButton(
+                    onTap: () => _showExportOptions(),
+                    title: TextConstants.export,
+                  ),
+                ),
+              ],
             ),
+            SizedBox(height: 15),
           ],
         ),
       ),
@@ -130,7 +156,7 @@ class _LibrariesExportSheetState extends State<LibrariesExportSheet> {
           children: [
             ListTile(
               leading: const Icon(Icons.table_chart),
-              title: const Text('Excel olarak dışa aktar'),
+              title: const Text(TextConstants.exportAsExcel),
               onTap: () async {
                 List<String> selectedData = getSelectedData();
                 await exportToExcel(selectedData, widget.allData);
@@ -140,7 +166,7 @@ class _LibrariesExportSheetState extends State<LibrariesExportSheet> {
             ),
             ListTile(
               leading: const Icon(Icons.file_copy),
-              title: const Text('CSV olarak dışa aktar'),
+              title: const Text(TextConstants.exportAsCsv),
               onTap: () async {
                 List<String> selectedData = getSelectedData();
                 await exportToCsv(selectedData, widget.allData);
@@ -158,7 +184,7 @@ class _LibrariesExportSheetState extends State<LibrariesExportSheet> {
       List<String> selectedKeys, List<dynamic> allData) async {
     if (!await _checkPermissions()) return;
     if (allData.isEmpty) {
-      showSnackBar(context, 'Dışa aktarılacak kayıt bulunamadı.');
+      showSnackBar(context, TextConstants.noRecordsFoundToExport);
       return;
     }
 
@@ -190,7 +216,7 @@ class _LibrariesExportSheetState extends State<LibrariesExportSheet> {
     final List<int> bytes = workbook.saveAsStream();
     await file.writeAsBytes(bytes);
 
-    showSnackBar(context, 'Excel dışa aktarımı başarılı: ${file.path}');
+    showSnackBar(context, "${TextConstants.excelExportSuccessful} ${file.path}");
     workbook.dispose();
   }
 
@@ -198,7 +224,7 @@ class _LibrariesExportSheetState extends State<LibrariesExportSheet> {
       List<String> selectedKeys, List<dynamic> allData) async {
     if (!await _checkPermissions()) return;
     if (allData.isEmpty) {
-      showSnackBar(context, 'Dışa aktarılacak kayıt bulunamadı.');
+      showSnackBar(context, TextConstants.noRecordsFoundToExport);
       return;
     }
 
@@ -213,7 +239,7 @@ class _LibrariesExportSheetState extends State<LibrariesExportSheet> {
     final file = await _getFilePath('data_${_formattedDateTime()}.csv');
     await file.writeAsString(csvData);
 
-    showSnackBar(context, 'CSV dışa aktarımı başarılı: ${file.path}');
+    showSnackBar(context, '${TextConstants.csvExportSuccessful} ${file.path}');
   }
 
   Future<bool> _checkPermissions() async {
@@ -222,7 +248,7 @@ class _LibrariesExportSheetState extends State<LibrariesExportSheet> {
       return true;
     } else {
       openAppSettings();
-      showSnackBar(context, 'Depolama izni gerekli.');
+      showSnackBar(context, TextConstants.storagePermitRequired);
       return false;
     }
   }

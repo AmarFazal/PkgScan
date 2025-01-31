@@ -139,12 +139,7 @@ class RecordService {
   }
 
   // Update Records
-  Future<List<Map<String, dynamic>>> updateRecord(
-      BuildContext context,
-      String entityId,
-      String recordId,
-      Map<String, dynamic> updatingData,
-      Map currentData) async {
+  Future<List<Map<String, dynamic>>> updateRecord(BuildContext context, String entityId, String recordId, Map<String, dynamic> updatingData, Map currentData) async {
     final String? accessToken = await AuthService().getValidAccessToken();
 
     if (accessToken == null) {

@@ -5,11 +5,11 @@ import 'package:flutter_pkgscan/widgets/auth_button.dart';
 import '../../constants/text_constants.dart';
 import '../custom_fields.dart';
 
-void showTextSearchDialog(BuildContext context,String entityId) {
+Future<void> showNameSearchDialog(BuildContext context,String entityId) {
   TextEditingController searchController = TextEditingController();
   TextEditingController pullingCountController = TextEditingController();
 
-  showModalBottomSheet(
+  return showModalBottomSheet(
     isScrollControlled: true,
     context: context,
     builder: (BuildContext context) {
@@ -40,7 +40,7 @@ void showTextSearchDialog(BuildContext context,String entityId) {
                 width: MediaQuery.of(context).size.width*0.4,
                 child: AuthButton(title: TextConstants.search, onTap: () {
                   NameSearchService().onTitleSend(context, searchController.text, entityId);
-
+                  Navigator.pop(context);
                 },),
               ),
               SizedBox(height: 16),

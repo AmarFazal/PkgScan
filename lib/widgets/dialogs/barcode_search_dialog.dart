@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../services/barcode_scanner_service.dart';
 
-void showBarcodeSearchDialog(BuildContext context, String entityId) {
+Future<void> showBarcodeSearchDialog(BuildContext context, String entityId) {
   final BarcodeScannerService barcodeScannerService = BarcodeScannerService();
-  showModalBottomSheet(
+ return showModalBottomSheet(
     isScrollControlled: true,
     context: context,
     builder: (BuildContext context) {
@@ -31,6 +31,7 @@ void showBarcodeSearchDialog(BuildContext context, String entityId) {
                         barcodeScannerService.onBarcodeScanned(
                             context, barcode, entityId); // Barcode tarandığında işleme al
                       }
+                      Navigator.pop(context);
                     }
                   },
                 ),

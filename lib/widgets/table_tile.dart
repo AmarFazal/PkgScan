@@ -10,6 +10,7 @@ class TableTile extends StatelessWidget {
   final String scrapeStatus;
   final VoidCallback onSwipe; // Sağa kaydırma işlemi için callback
   final bool isLoading;
+  final Widget quickEditWidget;
 
   const TableTile({
     super.key,
@@ -18,7 +19,7 @@ class TableTile extends StatelessWidget {
     required this.image,
     required this.lot,
     required this.scrapeStatus,
-    required this.onSwipe, required this.isLoading,
+    required this.onSwipe, required this.isLoading, required this.quickEditWidget,
   });
 
   @override
@@ -74,14 +75,7 @@ class TableTile extends StatelessWidget {
               :Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              GestureDetector(
-                onTap: () {},
-                child: Icon(
-                  Icons.edit,
-                  color: AppColors.primaryColor,
-                  size: 20,
-                ),
-              ),
+              quickEditWidget,
               SizedBox(width: 16),
               // Resim
               ClipRRect(

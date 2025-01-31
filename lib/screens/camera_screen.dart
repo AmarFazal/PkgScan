@@ -9,6 +9,8 @@ import 'package:flutter_pkgscan/services/record_service.dart';
 import 'package:flutter_pkgscan/widgets/snack_bar.dart';
 import 'package:http/http.dart' as http;
 
+import '../services/cloud_service.dart';
+
 class CameraScreen extends StatefulWidget {
   final String entityId;
 
@@ -46,7 +48,6 @@ class _CameraScreenState extends State<CameraScreen> {
     super.dispose();
   }
 
-  // Fotoğraf çekme ve POST isteği gönderme
   Future<void> _captureAndUploadPhoto() async {
     if (_isProcessing || _cameraController == null) return;
 
@@ -55,10 +56,8 @@ class _CameraScreenState extends State<CameraScreen> {
     });
 
     try {
-      // Fotoğrafı çekiyoruz
       final XFile photo = await _cameraController!.takePicture();
 
-      // Yükleniyor göstergesi
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -75,37 +74,11 @@ class _CameraScreenState extends State<CameraScreen> {
         },
       );
 
-      // Çekilen fotoğrafı POST ile gönderiyoruz
-      final url = Uri.parse("https://5f46-149-54-25-157.ngrok-free.app/upload-img-cloud");
-      final request = http.MultipartRequest('POST', url);
+      final String? imageUrl =
+      await CloudService().uploadPhotoToCloud(context, photo.path);
 
-      final String? checkedAccessToken = await AuthService().getValidAccessToken();
-
-      if (checkedAccessToken == null) {
-        showSnackBar(context, 'Access token not found. Please log in again.');
-        return null;
-      }
-
-      // Fotoğraf dosyasını ekliyoruz
-      request.files.add(
-        await http.MultipartFile.fromPath('file', photo.path),
-      );
-
-      // Authorization header ekliyoruz
-      final accessToken = checkedAccessToken; // Burada token'ınızı dinamik olarak alın
-      request.headers['Authorization'] = 'Bearer $accessToken';
-
-      // İstek gönderiliyor
-      final response = await request.send();
-      final responseData = await response.stream.bytesToString();
-
-      // JSON yanıtını çözüyoruz
-      final Map<String, dynamic> jsonResponse = json.decode(responseData);
-
-      if (jsonResponse['url'] != null) {
-        final imageUrl = jsonResponse['url'];
-
-        // RecordService'e veriyi gönderiyoruz
+      if (imageUrl != null) {
+        // RecordService'e gönderme işlemini burada kullanmaya devam edebilirsiniz
         final String? data = await RecordService().addRecord(
           context,
           widget.entityId,
@@ -114,29 +87,25 @@ class _CameraScreenState extends State<CameraScreen> {
           imageUrl,
         );
 
-        // Snackbar ile mesaj gösteriyoruz
         if (data != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(data)));
+          showSnackBar(context, data);
         }
 
-        // Dialog'u kapatıyoruz ve sonucu geri döndürüyoruz
-        Navigator.pop(context, imageUrl);
+        Navigator.pop(context, imageUrl); // İşlem tamamlandığında geri dön
       } else {
-        Navigator.pop(context);
-        throw Exception("Photo upload failed!");
+        throw Exception("Failed to get the image URL.");
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('An error occurred: $e')),
-      );
+      showSnackBar(context, "An error occurred: $e");
     } finally {
       setState(() {
         _isProcessing = false;
       });
 
-      Navigator.pop(context); // Yükleniyor göstergesini kapatıyoruz
+      Navigator.pop(context);
     }
   }
+
 
 
   @override

@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_pkgscan/widgets/header_icon.dart';
 import 'package:photo_view/photo_view.dart';
 
 import '../constants/app_colors.dart';
@@ -9,14 +10,16 @@ class EntriesImageContainer extends StatelessWidget {
   final String label;
   final String imageUrl;
   final VoidCallback? onTap;
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
+  final VoidCallback? onTapExport;
 
   EntriesImageContainer({
     super.key,
     required this.label,
     required this.imageUrl,
     this.onTap,
-    required this.onDelete,
+    this.onDelete,
+    this.onTapExport,
   });
 
   @override
@@ -57,56 +60,53 @@ class EntriesImageContainer extends StatelessWidget {
                     borderRadius: BorderRadius.circular(15),
                     child: Image.network(imageUrl)),
                 Positioned(
-                  top: 5,
-                  left: 5,
-                  child: GestureDetector(
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) {
-                          return Dialog(
-                            child: Container(
-                              height: 350,
-                              width: double.infinity,
-                              color: Colors.transparent,
-                              child: Image.network(
-                                imageUrl,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
+                    top: 5,
+                    left: 5,
+                    child: HeaderIcon(
+                        icon: Icons.remove_red_eye,
+                        color: Colors.black38,
+                        iconColor: Colors.white,
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              return Dialog(
+                                child: Container(
+                                  height: 350,
+                                  width: double.infinity,
+                                  color: Colors.transparent,
+                                  child: Image.network(
+                                    imageUrl,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              );
+                            },
                           );
-                        },
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: Colors.grey,
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      child: const Icon(
-                        Icons.remove_red_eye,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
+                        })),
                 Positioned(
                   top: 5,
                   right: 5,
-                  child: GestureDetector(
-                    onTap: onDelete,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                          color: Colors.grey,
-                          borderRadius: BorderRadius.circular(5)),
-                      child: const Icon(
-                        Icons.delete,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
+                  child: Row(
+                    children: [
+                      onDelete != null?
+                      HeaderIcon(
+                          icon: Icons.delete,
+                          color: Colors.black38,
+                          iconColor: Colors.white,
+                          onTap: onDelete!):SizedBox.shrink(),
+                      onTapExport != null?
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: HeaderIcon(
+                          color: Colors.black38,
+                          iconColor: Colors.white,
+                          onTap: onTapExport!,
+                          icon: Icons.upload,
+                        ),
+                      ):const SizedBox.shrink(),
+                    ],
+                  )
                 ),
               ],
             ),

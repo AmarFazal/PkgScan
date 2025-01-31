@@ -6,6 +6,7 @@ class HeaderIcon extends StatelessWidget {
   final String? letter;
   final VoidCallback onTap;
   final Color? color;
+  final Color? iconColor;
   final double? iconSize;
   final double? letterSize;
 
@@ -16,7 +17,7 @@ class HeaderIcon extends StatelessWidget {
     this.letter,
     this.color = AppColors.white,
     this.iconSize = 25,
-    this.letterSize = 21,
+    this.letterSize = 21, this.iconColor =AppColors.primaryColor,
   }) : super(key: key);
 
   @override
@@ -33,7 +34,7 @@ class HeaderIcon extends StatelessWidget {
         child: icon != null
             ? Icon(
                 icon,
-                color: AppColors.primaryColor,
+                color: iconColor,
                 size: iconSize,
               )
             : Center(

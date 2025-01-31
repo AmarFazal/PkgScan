@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pkgscan/widgets/header_icon.dart';
 import '../constants/app_colors.dart';
 
 Widget CustomField(
@@ -20,14 +21,13 @@ Widget CustomField(
   );
 }
 
-
 Widget CustomFieldWithoutIcon({
   required String label,
   required TextEditingController? controller,
-   ValueChanged?  onChanged,
-
+  ValueChanged? onChanged,
   TextInputType textInputType = TextInputType.multiline,
   int? maxLines = null, // Dinamik satır sayısı (varsayılan olarak sınırsız)
+  VoidCallback? onTapExport,
 }) {
   return Container(
     margin: const EdgeInsets.only(top: 0, bottom: 20),
@@ -36,16 +36,27 @@ Widget CustomFieldWithoutIcon({
       color: AppColors.secondaryColor,
       borderRadius: BorderRadius.circular(15),
     ),
-    child: TextField(
-      onChanged: onChanged,
-      controller: controller,
-      keyboardType: textInputType,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        labelText: label,
-        border: InputBorder.none,
-      ),
-
+    child: Row(
+      children: [
+        Expanded(
+          child: TextField(
+            onChanged: onChanged,
+            controller: controller,
+            keyboardType: textInputType,
+            maxLines: maxLines,
+            decoration: InputDecoration(
+              labelText: label,
+              border: InputBorder.none,
+            ),
+          ),
+        ),
+        onTapExport != null?
+        HeaderIcon(
+          color: Colors.white54,
+          onTap: onTapExport,
+          icon: Icons.upload,
+        ):const SizedBox.shrink(),
+      ],
     ),
   );
 }
