@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pkgscan/widgets/header_icon.dart';
 import 'package:flutter_pkgscan/widgets/snack_bar.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 
@@ -335,161 +336,349 @@ class _RecordScreenState extends State<RecordScreen> {
                                   title: header,
                                   isExpanded: isExpanded,
                                   onToggle: () => toggleExpansion(header),
-                                  children: entity!['groupedAttributes'][header]
-                                      .map<Widget>((attribute) {
-                                    return AttributeWidgets
-                                        .buildAttributeWidget(
-                                      context: context,
-                                      attribute: attribute,
-                                      header: header,
-                                      controllers: _controllers,
-                                      dynamicBooleans: dynamicBooleans,
-                                      imageValues: imageValues,
-                                      oldImageValues: oldImageValues,
-                                      entitiesId: entity!["_id"],
-                                      recordId: widget.recordId,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          dynamicBooleans[attribute['name']] =
-                                              value;
-                                        });
-                                        checkBooleanForChanges(
-                                            attribute['name'],
-                                            {attribute['name']: value});
-                                      },
-                                      onDelete: () {
-                                        setState(() {
-                                          oldImageValues[attribute['name']] =
-                                              imageValues[attribute['name']] =
-                                                  '';
-                                          checkImageForChanges(
-                                              attribute['name'],
-                                              {attribute['name']: ''});
-                                        });
-                                      },
-                                    );
-                                  }).toList(),
-                                  context: context,
-                                );
-                              } else if (header == 'Manual Images') {
-                                return buildExpandableSection(
-                                  title: header,
-                                  isExpanded: isExpanded,
-                                  onToggle: () => toggleExpansion(header),
                                   children: [
-                                    Column(
-                                      children: [
-                                        ...entity!['groupedAttributes'][header]
-                                            .map<Widget>((attribute) {
-                                          return Column(
-                                            children: [
-                                              AttributeWidgets
-                                                  .buildAttributeWidget(
-                                                context: context,
-                                                attribute: attribute,
-                                                header: header,
-                                                controllers: _controllers,
-                                                dynamicBooleans:
-                                                    dynamicBooleans,
-                                                imageValues: imageValues,
-                                                oldImageValues: oldImageValues,
-                                                entitiesId: entity!["_id"],
-                                                recordId: widget.recordId,
-                                                onChanged: (value) {
-                                                  setState(() {
-                                                    dynamicBooleans[
-                                                            attribute['name']] =
-                                                        value;
-                                                  });
-                                                  checkBooleanForChanges(
-                                                      attribute['name'], {
-                                                    attribute['name']: value
-                                                  });
-                                                },
-                                                onDelete: () {
-                                                  setState(() {
-                                                    oldImageValues[
-                                                            attribute['name']] =
-                                                        imageValues[attribute[
-                                                            'name']] = '';
-                                                    checkImageForChanges(
-                                                        attribute['name'], {
-                                                      attribute['name']: ''
-                                                    });
-                                                  });
-                                                },
-                                              ),
-                                            ],
-                                          );
-                                        }).toList(),
-                                        CustomCenterTitleButton(
-                                          title: "Add Image",
-                                          onTap: () async {
-                                            // Boş olan Manual Image'i bul
-                                            String? emptyAttributeName;
-                                            String? currentAttributeName;
-                                            for (var attribute
-                                                in entity!['groupedAttributes']
-                                                    [header]) {
-                                              final attributeName =
-                                                  attribute['name'];
-                                              final imageValue =
-                                                  imageValues[attributeName];
-                                              if ((imageValue == null ||
-                                                      imageValue.isEmpty) &&
-                                                  attributeName.contains(
-                                                      "Manual Image")) {
-                                                emptyAttributeName =
-                                                    attributeName;
-                                                currentAttributeName =
-                                                    attributeName;
-                                                break; // İlk boş olanı bulduktan sonra döngüyü kırıyoruz
-                                              }
-                                            }
+                                    // Main Information için normal attribute'lar
+                                    ...entity!['groupedAttributes'][header]
+                                        .map<Widget>((attribute) {
+                                      return AttributeWidgets
+                                          .buildAttributeWidget(
+                                        context: context,
+                                        attribute: attribute,
+                                        header: header,
+                                        controllers: _controllers,
+                                        dynamicBooleans: dynamicBooleans,
+                                        imageValues: imageValues,
+                                        oldImageValues: oldImageValues,
+                                        entitiesId: entity!["_id"],
+                                        recordId: widget.recordId,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            dynamicBooleans[attribute['name']] =
+                                                value;
+                                          });
+                                          checkBooleanForChanges(
+                                              attribute['name'],
+                                              {attribute['name']: value});
+                                        },
+                                        onDelete: () {
+                                          setState(() {
+                                            oldImageValues[attribute['name']] =
+                                                imageValues[attribute['name']] =
+                                                    '';
+                                            checkImageForChanges(
+                                                attribute['name'],
+                                                {attribute['name']: ''});
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                                    Container(
+                                      margin: const EdgeInsets.only(
+                                        top: 0,
+                                        bottom: 20,
+                                      ),
+                                      padding: const EdgeInsets.only(
+                                        top: 0,
+                                        bottom: 10,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.secondaryColor,
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                                left: 14, top: 8),
+                                            child: Text(
+                                              "Manual Images",
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .displaySmall
+                                                  ?.copyWith(
+                                                      color:
+                                                          AppColors.textColor,
+                                                      fontSize: 13),
+                                            ),
+                                          ),
+                                          SizedBox(
+                                            height:
+                                                200, // Fotoğrafların yüksekliği
+                                            child: ListView.builder(
+                                              scrollDirection: Axis.horizontal,
+                                              // Yatay kaydırma
+                                              itemCount:
+                                                  entity!['groupedAttributes']
+                                                              ['Manual Images']
+                                                          .length +
+                                                      1,
+                                              // +1 ekledik (Add Image butonu için)
+                                              itemBuilder: (context, index) {
+                                                if (index ==
+                                                    entity!['groupedAttributes']
+                                                            ['Manual Images']
+                                                        .length) {
+                                                  // Son eleman, Add Image butonu olacak
+                                                  return GestureDetector(
+                                                    onTap: () async {
+                                                      // Boş olan Manual Image'i bul
+                                                      String?
+                                                          emptyAttributeName;
+                                                      for (var attribute in entity![
+                                                              'groupedAttributes']
+                                                          ['Manual Images']) {
+                                                        final attributeName =
+                                                            attribute['name'];
+                                                        final imageValue =
+                                                            imageValues[
+                                                                attributeName];
+                                                        if ((imageValue ==
+                                                                    null ||
+                                                                imageValue
+                                                                    .isEmpty) &&
+                                                            attributeName.contains(
+                                                                "Manual Image")) {
+                                                          emptyAttributeName =
+                                                              attributeName;
+                                                          break; // İlk boş olanı bulduktan sonra döngüyü kırıyoruz
+                                                        }
+                                                      }
 
-                                            if (emptyAttributeName != null) {
-                                              // Boş attributeName göndererek handleImageUpload çağrılır
-                                              final String? uploadedImageUrl =
-                                                  await handleImageUpload(
-                                                context,
-                                                widget.entitiesId,
-                                                widget.recordId,
-                                                emptyAttributeName,
-                                                oldImageValues,
-                                                {}, // Ekstra veriler (optional)
-                                              );
+                                                      if (emptyAttributeName !=
+                                                          null) {
+                                                        // Boş attributeName göndererek handleImageUpload çağrılır
+                                                        final String?
+                                                            uploadedImageUrl =
+                                                            await handleImageUpload(
+                                                          context,
+                                                          widget.entitiesId,
+                                                          widget.recordId,
+                                                          emptyAttributeName,
+                                                          oldImageValues,
+                                                          {}, // Ekstra veriler (optional)
+                                                        );
 
-                                              if (uploadedImageUrl != null) {
-                                                // Image URL yüklendikten sonra oldImageValues güncellenir
-                                                setState(() {
-                                                  imageValues[
-                                                          emptyAttributeName!] =
-                                                      uploadedImageUrl; // Boş attributeName için URL atanır
-                                                });
+                                                        if (uploadedImageUrl !=
+                                                            null) {
+                                                          // Image URL yüklendikten sonra oldImageValues güncellenir
+                                                          setState(() {
+                                                            imageValues[
+                                                                    emptyAttributeName!] =
+                                                                uploadedImageUrl;
+                                                          });
 
-                                                // fetchRecordData çağrılır
-                                                await _fetchRecordData();
-                                              } else {
-                                                // Hata durumunda yapılacak işlemler
-                                                debugPrint(
-                                                    "Image upload failed or canceled.");
-                                              }
-                                            } else {
-                                              // Hiç boş Manual Image yoksa kullanıcıya bilgi ver
-                                              showSnackBar(context,
-                                                  "No empty Manual Image available!");
-                                            }
-                                            print(emptyAttributeName);
-                                          },
-                                          icon: Icons.image,
-                                          iconColor: Colors.blue,
-                                          titleColor: Colors.blue,
-                                        ),
-                                      ],
-                                    ),
+                                                          // fetchRecordData çağrılır
+                                                          await _fetchRecordData();
+                                                        } else {
+                                                          // Hata durumunda yapılacak işlemler
+                                                          debugPrint(
+                                                              "Image upload failed or canceled.");
+                                                        }
+                                                      } else {
+                                                        // Hiç boş Manual Image yoksa kullanıcıya bilgi ver
+                                                        showSnackBar(context,
+                                                            "No empty Manual Image available!");
+                                                      }
+                                                      print(emptyAttributeName);
+                                                    },
+                                                    child: Container(
+                                                      width: 150,
+                                                      height: 200,
+                                                      margin:
+                                                          const EdgeInsets.all(
+                                                              8.0),
+                                                      decoration: BoxDecoration(
+                                                        image:
+                                                            const DecorationImage(
+                                                          image: AssetImage(
+                                                              "assets/images/background_1.png"),
+                                                          fit: BoxFit
+                                                              .cover, // Resmi tamamen kaplamak için
+                                                        ),
+                                                        color: Colors.white
+                                                            .withOpacity(0.4),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(10),
+                                                      ),
+                                                      child: Column(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .center,
+                                                        children: [
+                                                          const Icon(
+                                                              Icons.add_a_photo,
+                                                              size: 40,
+                                                              color: AppColors
+                                                                  .primaryColor),
+                                                          const SizedBox(
+                                                              height: 5),
+                                                          Text(
+                                                            TextConstants
+                                                                .addImage,
+                                                            style: Theme.of(
+                                                                    context)
+                                                                .textTheme
+                                                                .displayMedium
+                                                                ?.copyWith(
+                                                                    color: AppColors
+                                                                        .primaryColor),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  );
+                                                }
+
+                                                final attribute =
+                                                    entity!['groupedAttributes']
+                                                            ['Manual Images']
+                                                        [index];
+                                                final imageUrl = imageValues[
+                                                    attribute['name']];
+
+                                                if (imageUrl == null ||
+                                                    imageUrl.isEmpty) {
+                                                  return Container(); // Boş container, hata vermeyi engeller
+                                                }
+
+                                                return Padding(
+                                                  padding:
+                                                      const EdgeInsets.all(8.0),
+                                                  child: Stack(
+                                                    children: [
+                                                      GestureDetector(
+                                                        onTap: () {
+                                                          showDialog(
+                                                            context: context,
+                                                            builder:
+                                                                (context) =>
+                                                                    Dialog(
+                                                              backgroundColor:
+                                                                  Colors
+                                                                      .transparent,
+                                                              shape:
+                                                                  RoundedRectangleBorder(
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            25),
+                                                              ),
+                                                              child: Stack(
+                                                                children: [
+                                                                  ClipRRect(
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                            25),
+                                                                    child: Image.network(
+                                                                        imageUrl,
+                                                                        fit: BoxFit
+                                                                            .contain),
+                                                                  ),
+                                                                  Positioned(
+                                                                    top: 20,
+                                                                    right: 20,
+                                                                    child:
+                                                                        HeaderIcon(
+                                                                      icon: Icons
+                                                                          .close_rounded,
+                                                                      onTap: () =>
+                                                                          Navigator.pop(
+                                                                              context),
+                                                                      iconColor:
+                                                                          Colors
+                                                                              .white,
+                                                                      color: Colors
+                                                                          .black38,
+                                                                      iconSize:
+                                                                          15,
+                                                                    ),
+                                                                  ),
+                                                                  Positioned(
+                                                                      bottom:
+                                                                          20,
+                                                                      right: 20,
+                                                                      child: HeaderIcon(
+                                                                          icon: Icons.delete,
+                                                                          onTap: () {
+                                                                            setState(() {
+                                                                              oldImageValues[attribute['name']] = imageValues[attribute['name']] = '';
+                                                                            });
+                                                                            checkImageForChanges(attribute['name'], {
+                                                                              attribute['name']: ''
+                                                                            });
+                                                                            Navigator.pop(context);
+                                                                          },
+                                                                          iconColor: Colors.white,
+                                                                          color: Colors.black38,
+                                                                          iconSize: 15)),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          );
+                                                        },
+                                                        child: ClipRRect(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(10),
+                                                          child: Image.network(
+                                                            imageUrl,
+                                                            fit: BoxFit.cover,
+                                                            width: 150,
+                                                            height: 200,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      Positioned(
+                                                        top: 5,
+                                                        right: 5,
+                                                        child: SizedBox(
+                                                          height: 20,
+                                                          width: 20,
+                                                          child: HeaderIcon(
+                                                            icon: Icons.delete,
+                                                            onTap: () {
+                                                              setState(() {
+                                                                oldImageValues[
+                                                                        attribute[
+                                                                            'name']] =
+                                                                    imageValues[
+                                                                        attribute[
+                                                                            'name']] = '';
+                                                              });
+                                                              checkImageForChanges(
+                                                                  attribute[
+                                                                      'name'],
+                                                                  {
+                                                                    attribute[
+                                                                        'name']: ''
+                                                                  });
+                                                            },
+                                                            iconColor:
+                                                                Colors.white,
+                                                            color:
+                                                                Colors.black38,
+                                                            iconSize: 15,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                    // Manual Images için yatay kaydırılabilir fotoğraf listesi
                                   ],
                                   context: context,
                                 );
+                              } else if (header == 'Manual Images') {
+                                return const SizedBox.shrink();
                               } else if (header == 'Online Pulled Listings') {
                                 if (isExpandedList.length <
                                     combinedList.length + 1) {
@@ -544,7 +733,8 @@ class _RecordScreenState extends State<RecordScreen> {
                                                             'Pulled Images'] =
                                                         listing['image'] ?? '';
                                                   });
-                                                }):const SizedBox.shrink(),
+                                                })
+                                            : const SizedBox.shrink(),
                                         CustomFieldWithoutIcon(
                                           label: TextConstants.msrp,
                                           controller: TextEditingController(

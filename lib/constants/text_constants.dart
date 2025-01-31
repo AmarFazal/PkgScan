@@ -64,6 +64,7 @@ class TextConstants {
   static const String selectAnIcon = "Select an Icon";
   static const String cancel = "Cancel";
   static const String add = "Add";
+  static const String addImage = "Add Image";
   static const String export = "Export";
   static const String selectAll = "Select All";
   static const String exportAsExcel = "Export as Excel";

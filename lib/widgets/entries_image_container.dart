@@ -71,43 +71,61 @@ class EntriesImageContainer extends StatelessWidget {
                             context: context,
                             builder: (context) {
                               return Dialog(
-                                child: Container(
-                                  height: 350,
-                                  width: double.infinity,
-                                  color: Colors.transparent,
-                                  child: Image.network(
-                                    imageUrl,
-                                    fit: BoxFit.cover,
-                                  ),
+                                backgroundColor: Colors.transparent,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(25),
+                                ),
+                                child: Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(25),
+                                      child: Image.network(
+                                        imageUrl,
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 20,
+                                      right: 20,
+                                      child: HeaderIcon(
+                                        icon: Icons.close_rounded,
+                                        onTap: () => Navigator.pop(context),
+                                        iconColor: Colors.white,
+                                        color: Colors.black38,
+                                        iconSize: 15,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               );
                             },
                           );
                         })),
                 Positioned(
-                  top: 5,
-                  right: 5,
-                  child: Row(
-                    children: [
-                      onDelete != null?
-                      HeaderIcon(
-                          icon: Icons.delete,
-                          color: Colors.black38,
-                          iconColor: Colors.white,
-                          onTap: onDelete!):SizedBox.shrink(),
-                      onTapExport != null?
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: HeaderIcon(
-                          color: Colors.black38,
-                          iconColor: Colors.white,
-                          onTap: onTapExport!,
-                          icon: Icons.upload,
-                        ),
-                      ):const SizedBox.shrink(),
-                    ],
-                  )
-                ),
+                    top: 5,
+                    right: 5,
+                    child: Row(
+                      children: [
+                        onDelete != null
+                            ? HeaderIcon(
+                                icon: Icons.delete,
+                                color: Colors.black38,
+                                iconColor: Colors.white,
+                                onTap: onDelete!)
+                            : const SizedBox.shrink(),
+                        onTapExport != null
+                            ? Padding(
+                                padding: const EdgeInsets.only(left: 8.0),
+                                child: HeaderIcon(
+                                  color: Colors.black38,
+                                  iconColor: Colors.white,
+                                  onTap: onTapExport!,
+                                  icon: Icons.upload,
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ],
+                    )),
               ],
             ),
           ],
