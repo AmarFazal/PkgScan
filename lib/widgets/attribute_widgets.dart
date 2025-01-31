@@ -297,15 +297,19 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
   }
 }
 
-Future<String?> handleImageUpload(
+Future<List<String>?> handleImageUpload(
   BuildContext context,
   String entitiesId,
   String recordId,
-  String attributeName,
+  List<String> emptyAttributeNames,
   Map oldImageValues,
   Map imageValues,
+  Function(String attributeName, String imageUrl) onImageUploaded,
+  // Callback fonksiyonu
 ) async {
   final ImagePicker _picker = ImagePicker();
+
+  // Kullanıcıya galeriden veya kameradan seçim yapma seçeneği sun
   final ImageSource? source = await showModalBottomSheet<ImageSource>(
     context: context,
     builder: (context) => SizedBox(
@@ -334,67 +338,63 @@ Future<String?> handleImageUpload(
   );
 
   if (source != null) {
-    final XFile? image = await _picker.pickImage(source: source);
-    if (image != null) {
-      File selectedImage = File(image.path);
+    List<XFile>? images;
 
-      // Göster yükleme dialogu
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return Dialog(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(width: 20),
-                  Text(
-                    "Uploading Image...",
-                    style: Theme.of(context).textTheme.displayMedium,
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+    if (source == ImageSource.gallery) {
+      // Galeriden birden fazla fotoğraf seç
+      images = await _picker.pickMultiImage(
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
       );
+    } else if (source == ImageSource.camera) {
+      // Kameradan tek bir fotoğraf seç
+      final XFile? image = await _picker.pickImage(source: source);
+      if (image != null) {
+        images = [image];
+      }
+    }
+
+    if (images != null && images.isNotEmpty) {
+      if (images.length > 10) {
+        showSnackBar(context, "You can select up to 10 images.");
+        images = images.sublist(0, 10);
+      }
+
+      if (emptyAttributeNames.length < images.length) {
+        showSnackBar(context, "Not enough manual image slots available. You may add up to 10 photos.");
+        return null;
+      }
 
       try {
-        // Fotoğraf sıkıştırma
-        File compressedImage = await compressImage(selectedImage);
+        List<String> uploadedImageUrls = [];
 
-        // Fotoğraf yükleme
-        final String? imageUrl = await CloudService()
-            .uploadPhotoToCloud(context, compressedImage.path);
+        for (int i = 0; i < images.length; i++) {
+          File selectedImage = File(images[i].path);
+          File compressedImage = await compressImage(selectedImage);
+          final String? imageUrl = await CloudService()
+              .uploadPhotoToCloud(context, compressedImage.path);
 
-        Navigator.of(context).pop(); // Yükleme diyalogunu kapat
+          if (imageUrl != null) {
+            final emptyAttributeName = emptyAttributeNames[i];
+            // Callback fonksiyonunu çağır
+            onImageUploaded(emptyAttributeName, imageUrl);
 
-        if (imageUrl != null) {
-          debugPrint("Image URL: $imageUrl");
-          showSnackBar(context, "Image uploaded successfully! URL: $imageUrl");
+            await RecordService().updateRecord(
+              context,
+              entitiesId,
+              recordId,
+              {emptyAttributeName: imageUrl},
+              oldImageValues,
+            );
 
-          // Veritabanını güncelle
-          await RecordService().updateRecord(
-            context,
-            entitiesId,
-            recordId,
-            {attributeName: imageUrl},
-            oldImageValues,
-          );
-
-          // `imageValues` güncelle
-          imageValues[attributeName] = imageUrl;
-
-          return imageUrl; // `imageUrl` döndür
-        } else {
-          showSnackBar(context, 'Image upload failed.');
-          return null;
+            uploadedImageUrls.add(imageUrl);
+          }
         }
+
+        showSnackBar(context, "${images.length} images uploaded successfully!");
+        return uploadedImageUrls;
       } catch (e) {
-        Navigator.of(context).pop(); // Yükleme diyalogunu kapat
         showSnackBar(context, "Error during upload: $e");
         return null;
       }

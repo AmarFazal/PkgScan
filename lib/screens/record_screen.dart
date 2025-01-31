@@ -423,65 +423,42 @@ class _RecordScreenState extends State<RecordScreen> {
                                                   // Son eleman, Add Image butonu olacak
                                                   return GestureDetector(
                                                     onTap: () async {
-                                                      // Boş olan Manual Image'i bul
-                                                      String?
-                                                          emptyAttributeName;
-                                                      for (var attribute in entity![
-                                                              'groupedAttributes']
-                                                          ['Manual Images']) {
-                                                        final attributeName =
-                                                            attribute['name'];
-                                                        final imageValue =
-                                                            imageValues[
-                                                                attributeName];
-                                                        if ((imageValue ==
-                                                                    null ||
-                                                                imageValue
-                                                                    .isEmpty) &&
-                                                            attributeName.contains(
-                                                                "Manual Image")) {
-                                                          emptyAttributeName =
-                                                              attributeName;
-                                                          break; // İlk boş olanı bulduktan sonra döngüyü kırıyoruz
+                                                      List<String> emptyAttributeNames = [];
+                                                      for (var attribute in entity!['groupedAttributes']['Manual Images']) {
+                                                        final attributeName = attribute['name'];
+                                                        final imageValue = imageValues[attributeName];
+                                                        if ((imageValue == null || imageValue.isEmpty) &&
+                                                            attributeName.contains("Manual Image")) {
+                                                          emptyAttributeNames.add(attributeName);
                                                         }
                                                       }
 
-                                                      if (emptyAttributeName !=
-                                                          null) {
-                                                        // Boş attributeName göndererek handleImageUpload çağrılır
-                                                        final String?
-                                                            uploadedImageUrl =
-                                                            await handleImageUpload(
-                                                          context,
-                                                          widget.entitiesId,
-                                                          widget.recordId,
-                                                          emptyAttributeName,
-                                                          oldImageValues,
-                                                          {}, // Ekstra veriler (optional)
-                                                        );
-
-                                                        if (uploadedImageUrl !=
-                                                            null) {
-                                                          // Image URL yüklendikten sonra oldImageValues güncellenir
+                                                      final List<String>? uploadedImageUrls = await handleImageUpload(
+                                                        context,
+                                                        widget.entitiesId,
+                                                        widget.recordId,
+                                                        emptyAttributeNames, // Boş attribute'ları gönder
+                                                        oldImageValues,
+                                                        imageValues,
+                                                            (attributeName, imageUrl) {
+                                                          // Callback fonksiyonu: State'i güncelle
                                                           setState(() {
-                                                            imageValues[
-                                                                    emptyAttributeName!] =
-                                                                uploadedImageUrl;
+                                                            imageValues[attributeName] = imageUrl;
                                                           });
+                                                        },
+                                                      );
 
-                                                          // fetchRecordData çağrılır
-                                                          await _fetchRecordData();
-                                                        } else {
-                                                          // Hata durumunda yapılacak işlemler
-                                                          debugPrint(
-                                                              "Image upload failed or canceled.");
-                                                        }
+                                                      if (uploadedImageUrls != null) {
+                                                        await _fetchRecordData();
                                                       } else {
-                                                        // Hiç boş Manual Image yoksa kullanıcıya bilgi ver
-                                                        showSnackBar(context,
-                                                            "No empty Manual Image available!");
+                                                        debugPrint("Image upload failed or canceled.");
                                                       }
-                                                      print(emptyAttributeName);
+
+                                                      if (emptyAttributeNames.isNotEmpty) {
+                                                        // Fotoğraf yükleme işlemi
+                                                      } else {
+                                                        showSnackBar(context, "No empty Manual Image available!");
+                                                      }
                                                     },
                                                     child: Container(
                                                       width: 150,
@@ -733,6 +710,7 @@ class _RecordScreenState extends State<RecordScreen> {
                                                             'Pulled Images'] =
                                                         listing['image'] ?? '';
                                                   });
+                                                  showSnackBar(context, TextConstants.pulledImageUpdatedInMainInformation);
                                                 })
                                             : const SizedBox.shrink(),
                                         CustomFieldWithoutIcon(
@@ -748,6 +726,7 @@ class _RecordScreenState extends State<RecordScreen> {
                                               _controllers['MSRP']?.text =
                                                   listing['msrp'] ?? '';
                                             });
+                                            showSnackBar(context, TextConstants.msrpUpdatedInMainInformation);
                                           },
                                         ),
                                         CustomFieldWithoutIcon(
@@ -764,7 +743,9 @@ class _RecordScreenState extends State<RecordScreen> {
                                               _controllers['Title']?.text =
                                                   listing['title'] ?? '';
                                             });
+                                            showSnackBar(context, TextConstants.titleUpdatedInMainInformation);
                                           },
+
                                         ),
                                         CustomCenterTitleButton(
                                           title: TextConstants.keepAllData,
@@ -781,6 +762,7 @@ class _RecordScreenState extends State<RecordScreen> {
                                               imageValues['Pulled Images'] =
                                                   listing['image'] ?? '';
                                             });
+                                            showSnackBar(context, TextConstants.dataUpdatedInMainInformation);
                                           },
                                         ),
                                       ],

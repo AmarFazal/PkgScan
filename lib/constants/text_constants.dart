@@ -14,6 +14,10 @@ class TextConstants {
   static const String noRecordsFoundToExport = "No records found to export";
   static const String csvExportSuccessful = "CSV export successful:";
   static const String storagePermitRequired = "Storage permit required.";
+  static const String dataUpdatedInMainInformation = "Data Updated in Main Information";
+  static const String msrpUpdatedInMainInformation = "MSRP Updated in Main Information";
+  static const String titleUpdatedInMainInformation = "Title Updated in Main Information";
+  static const String pulledImageUpdatedInMainInformation = "Pulled Image Updated in Main Information";
 
   // Diğer sabit metinler
   static const String emailOrUsername = "Email or Username";
