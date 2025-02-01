@@ -6,6 +6,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import '../constants/app_colors.dart';
 import '../constants/text_constants.dart';
 import '../services/entities_service.dart';
+import '../services/handle_image_upload.dart';
 import '../services/record_service.dart';
 import '../widgets/attribute_widgets.dart';
 import '../widgets/custom_center_title_button.dart';
@@ -54,10 +55,10 @@ class _RecordScreenState extends State<RecordScreen> {
     _retrieveEntity();
     expandedSections = {
       'Main Information': true,
-      'Manual Images': false,
-      'Online Pulled Listings': false,
-      'Other Information': false,
-      'Scrape Data': false,
+      'Manual Images': true,
+      'Online Pulled Listings': true,
+      'Other Information': true,
+      'Scrape Data': true,
       // Add more sections here if needed
     };
     super.initState();
@@ -407,6 +408,7 @@ class _RecordScreenState extends State<RecordScreen> {
                                             height:
                                                 200, // Fotoğrafların yüksekliği
                                             child: ListView.builder(
+
                                               scrollDirection: Axis.horizontal,
                                               // Yatay kaydırma
                                               itemCount:
@@ -416,6 +418,27 @@ class _RecordScreenState extends State<RecordScreen> {
                                                       1,
                                               // +1 ekledik (Add Image butonu için)
                                               itemBuilder: (context, index) {
+                                                List<String>
+                                                    emptyAttributeNames = [];
+
+                                                // Boş attribute'ları kontrol et ve listeyi doldur
+                                                for (var attribute in entity![
+                                                        'groupedAttributes']
+                                                    ['Manual Images']) {
+                                                  final attributeName =
+                                                      attribute['name'];
+                                                  final imageValue =
+                                                      imageValues[
+                                                          attributeName];
+                                                  if ((imageValue == null ||
+                                                          imageValue.isEmpty) &&
+                                                      attributeName.contains(
+                                                          "Manual Image")) {
+                                                    emptyAttributeNames
+                                                        .add(attributeName);
+                                                  }
+                                                }
+
                                                 if (index ==
                                                     entity!['groupedAttributes']
                                                             ['Manual Images']
@@ -423,41 +446,41 @@ class _RecordScreenState extends State<RecordScreen> {
                                                   // Son eleman, Add Image butonu olacak
                                                   return GestureDetector(
                                                     onTap: () async {
-                                                      List<String> emptyAttributeNames = [];
-                                                      for (var attribute in entity!['groupedAttributes']['Manual Images']) {
-                                                        final attributeName = attribute['name'];
-                                                        final imageValue = imageValues[attributeName];
-                                                        if ((imageValue == null || imageValue.isEmpty) &&
-                                                            attributeName.contains("Manual Image")) {
-                                                          emptyAttributeNames.add(attributeName);
-                                                        }
-                                                      }
-
-                                                      final List<String>? uploadedImageUrls = await handleImageUpload(
+                                                      final List<String>?
+                                                          uploadedImageUrls =
+                                                          await handleImageUpload(
                                                         context,
                                                         widget.entitiesId,
                                                         widget.recordId,
-                                                        emptyAttributeNames, // Boş attribute'ları gönder
+                                                        emptyAttributeNames,
+                                                        // Boş attribute'ları gönder
                                                         oldImageValues,
                                                         imageValues,
-                                                            (attributeName, imageUrl) {
+                                                        (attributeName,
+                                                            imageUrl) {
                                                           // Callback fonksiyonu: State'i güncelle
                                                           setState(() {
-                                                            imageValues[attributeName] = imageUrl;
+                                                            imageValues[
+                                                                    attributeName] =
+                                                                imageUrl;
                                                           });
                                                         },
                                                       );
 
-                                                      if (uploadedImageUrls != null) {
+                                                      if (uploadedImageUrls !=
+                                                          null) {
                                                         await _fetchRecordData();
                                                       } else {
-                                                        debugPrint("Image upload failed or canceled.");
+                                                        debugPrint(
+                                                            "Image upload failed or canceled.");
                                                       }
 
-                                                      if (emptyAttributeNames.isNotEmpty) {
+                                                      if (emptyAttributeNames
+                                                          .isNotEmpty) {
                                                         // Fotoğraf yükleme işlemi
                                                       } else {
-                                                        showSnackBar(context, "No empty Manual Image available!");
+                                                        showSnackBar(context,
+                                                            "No empty Manual Image available!");
                                                       }
                                                     },
                                                     child: Container(
@@ -502,6 +525,17 @@ class _RecordScreenState extends State<RecordScreen> {
                                                                 ?.copyWith(
                                                                     color: AppColors
                                                                         .primaryColor),
+                                                          ),
+                                                          const SizedBox(
+                                                              height: 5),
+
+                                                          Text(
+                                                            "${TextConstants.youHave + emptyAttributeNames.length.toString() + TextConstants.photosLeft}",
+                                                            style: Theme.of(
+                                                                    context)
+                                                                .textTheme
+                                                                .displaySmall?.copyWith(color: AppColors.textColor),
+                                                            textAlign: TextAlign.center,
                                                           ),
                                                         ],
                                                       ),
@@ -574,23 +608,36 @@ class _RecordScreenState extends State<RecordScreen> {
                                                                     ),
                                                                   ),
                                                                   Positioned(
-                                                                      bottom:
-                                                                          20,
-                                                                      right: 20,
-                                                                      child: HeaderIcon(
-                                                                          icon: Icons.delete,
-                                                                          onTap: () {
-                                                                            setState(() {
-                                                                              oldImageValues[attribute['name']] = imageValues[attribute['name']] = '';
-                                                                            });
-                                                                            checkImageForChanges(attribute['name'], {
+                                                                    bottom: 20,
+                                                                    right: 20,
+                                                                    child:
+                                                                        HeaderIcon(
+                                                                      icon: Icons
+                                                                          .delete,
+                                                                      onTap:
+                                                                          () {
+                                                                        setState(
+                                                                            () {
+                                                                          oldImageValues[attribute['name']] =
+                                                                              imageValues[attribute['name']] = '';
+                                                                        });
+                                                                        checkImageForChanges(
+                                                                            attribute['name'],
+                                                                            {
                                                                               attribute['name']: ''
                                                                             });
-                                                                            Navigator.pop(context);
-                                                                          },
-                                                                          iconColor: Colors.white,
-                                                                          color: Colors.black38,
-                                                                          iconSize: 15)),
+                                                                        Navigator.pop(
+                                                                            context);
+                                                                      },
+                                                                      iconColor:
+                                                                          Colors
+                                                                              .white,
+                                                                      color: Colors
+                                                                          .black38,
+                                                                      iconSize:
+                                                                          15,
+                                                                    ),
+                                                                  ),
                                                                 ],
                                                               ),
                                                             ),
@@ -661,7 +708,7 @@ class _RecordScreenState extends State<RecordScreen> {
                                     combinedList.length + 1) {
                                   // Liste boyutunu kontrol et ve yeniden oluştur
                                   isExpandedList = List.filled(
-                                      combinedList.length + 1, false);
+                                      combinedList.length + 1, true);
                                 }
                                 return buildExpandableSection(
                                   title: 'Online Pulled Listings',
@@ -710,7 +757,10 @@ class _RecordScreenState extends State<RecordScreen> {
                                                             'Pulled Images'] =
                                                         listing['image'] ?? '';
                                                   });
-                                                  showSnackBar(context, TextConstants.pulledImageUpdatedInMainInformation);
+                                                  showSnackBar(
+                                                      context,
+                                                      TextConstants
+                                                          .pulledImageUpdatedInMainInformation);
                                                 })
                                             : const SizedBox.shrink(),
                                         CustomFieldWithoutIcon(
@@ -726,7 +776,10 @@ class _RecordScreenState extends State<RecordScreen> {
                                               _controllers['MSRP']?.text =
                                                   listing['msrp'] ?? '';
                                             });
-                                            showSnackBar(context, TextConstants.msrpUpdatedInMainInformation);
+                                            showSnackBar(
+                                                context,
+                                                TextConstants
+                                                    .msrpUpdatedInMainInformation);
                                           },
                                         ),
                                         CustomFieldWithoutIcon(
@@ -743,9 +796,11 @@ class _RecordScreenState extends State<RecordScreen> {
                                               _controllers['Title']?.text =
                                                   listing['title'] ?? '';
                                             });
-                                            showSnackBar(context, TextConstants.titleUpdatedInMainInformation);
+                                            showSnackBar(
+                                                context,
+                                                TextConstants
+                                                    .titleUpdatedInMainInformation);
                                           },
-
                                         ),
                                         CustomCenterTitleButton(
                                           title: TextConstants.keepAllData,
@@ -762,7 +817,10 @@ class _RecordScreenState extends State<RecordScreen> {
                                               imageValues['Pulled Images'] =
                                                   listing['image'] ?? '';
                                             });
-                                            showSnackBar(context, TextConstants.dataUpdatedInMainInformation);
+                                            showSnackBar(
+                                                context,
+                                                TextConstants
+                                                    .dataUpdatedInMainInformation);
                                           },
                                         ),
                                       ],

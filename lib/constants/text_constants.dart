@@ -17,7 +17,10 @@ class TextConstants {
   static const String dataUpdatedInMainInformation = "Data Updated in Main Information";
   static const String msrpUpdatedInMainInformation = "MSRP Updated in Main Information";
   static const String titleUpdatedInMainInformation = "Title Updated in Main Information";
+  static const String doYouWantToTakeAnotherPhoto = "Do you want to take another photo?";
   static const String pulledImageUpdatedInMainInformation = "Pulled Image Updated in Main Information";
+  static const String youHave = "You have ";
+  static const String photosLeft = " photos left";
 
   // Diğer sabit metinler
   static const String emailOrUsername = "Email or Username";
@@ -59,6 +62,8 @@ class TextConstants {
   static const String lot = "Lot";
   static const String lotLetter = "Lot Letter";
   static const String consignor = "Consignor";
+  static const String no = "No";
+  static const String yes = "Yes";
   static const String code = "Code";
   static const String asin = "ASIN";
   static const String sourceLink = "Source Link";
