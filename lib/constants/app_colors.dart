@@ -11,6 +11,7 @@ class AppColors {
   static const Color errorColor = Color(0xFFF44336);
   static const Color warningColor = Color(0xFFFFC107);
   static const Color blue = Color(0xFF0866FF);
+  static const Color darkBlue = Color(0xFF0548B6);
 
   static const Color white = Color(0xFFFFFFFF);
   static const Color bottomNavigationColor = Color(0xFFFFFFFF);

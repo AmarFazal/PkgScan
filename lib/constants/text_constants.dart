@@ -38,11 +38,15 @@ class TextConstants {
   static const String logoutButton = "Logout";
   static const String send = "Send";
   static const String search = "Search";
+  static const String searchProduct = "Search Product";
   static const String manifests = "Manifests";
   static const String menu = "Menu";
   static const String account = "Account";
   static const String help = "Help";
   static const String application = "APPLICATION";
+  static const String enterCode = "Enter Code";
+  static const String enterBarcodeCode = "Enter Barcode Code";
+  static const String scanBarcode = "Scan Barcode";
   static const String maintenance = "Maintenance";
   static const String serverSettings = "Server Settings";
   static const String license = "License";

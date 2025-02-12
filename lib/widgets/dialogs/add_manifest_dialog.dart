@@ -61,53 +61,53 @@ Future<void> showAddManifestDialog({
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                 ),
               ),
-              const SizedBox(height: 20),
+              //const SizedBox(height: 20),
               // Dropdown ile ikon seçme
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: Colors.grey, width: 1),
-                ),
-                child: StatefulBuilder(builder: (context, setDialogState) {
-                  return DropdownButton<IconData>(
-                    value: tempSelectedIcon ?? Icons.task_outlined,
-                    hint: Text(TextConstants.selectAnIcon),
-                    isExpanded: true,
-                    elevation: 0,
-                    borderRadius: BorderRadius.circular(25),
-                    underline: SizedBox(),
-                    items: iconList.map((Map<String, dynamic> icon) {
-                      return DropdownMenuItem<IconData>(
-                        value: icon['icon'],
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: Row(
-                            children: [
-                              Icon(
-                                icon['icon'],
-                                color: AppColors.primaryColor,
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                icon['name'],
-                                style:
-                                    Theme.of(context).textTheme.displayMedium,
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (icon) {
-                      setDialogState(() {
-                        tempSelectedIcon = icon;
-                      });
-                    },
-                  );
-                }),
-              ),
-              const SizedBox(height: 20),
+              // Container(
+              //   padding: EdgeInsets.symmetric(horizontal: 10),
+              //   decoration: BoxDecoration(
+              //     borderRadius: BorderRadius.circular(30),
+              //     border: Border.all(color: Colors.grey, width: 1),
+              //   ),
+              //   child: StatefulBuilder(builder: (context, setDialogState) {
+              //     return DropdownButton<IconData>(
+              //       value: tempSelectedIcon ?? Icons.task_outlined,
+              //       hint: Text(TextConstants.selectAnIcon),
+              //       isExpanded: true,
+              //       elevation: 0,
+              //       borderRadius: BorderRadius.circular(25),
+              //       underline: SizedBox(),
+              //       items: iconList.map((Map<String, dynamic> icon) {
+              //         return DropdownMenuItem<IconData>(
+              //           value: icon['icon'],
+              //           child: Padding(
+              //             padding: const EdgeInsets.symmetric(vertical: 8.0),
+              //             child: Row(
+              //               children: [
+              //                 Icon(
+              //                   icon['icon'],
+              //                   color: AppColors.primaryColor,
+              //                 ),
+              //                 const SizedBox(width: 10),
+              //                 Text(
+              //                   icon['name'],
+              //                   style:
+              //                       Theme.of(context).textTheme.displayMedium,
+              //                 ),
+              //               ],
+              //             ),
+              //           ),
+              //         );
+              //       }).toList(),
+              //       onChanged: (icon) {
+              //         setDialogState(() {
+              //           tempSelectedIcon = icon;
+              //         });
+              //       },
+              //     );
+              //   }),
+              // ),
+              //const SizedBox(height: 20),
               // İptal ve Ekle butonları
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

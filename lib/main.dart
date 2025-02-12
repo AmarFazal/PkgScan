@@ -38,7 +38,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+        GlobalKey<ScaffoldMessengerState>();
     return MaterialApp(
+      scaffoldMessengerKey: scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         appBarTheme: const AppBarTheme(
@@ -48,16 +51,15 @@ class MyApp extends StatelessWidget {
         primaryColor: AppColors.primaryColor,
         primarySwatch: AppColors.primarySwatch,
         scaffoldBackgroundColor: AppColors.backgroundColor,
-        snackBarTheme: const SnackBarThemeData(
+        snackBarTheme: SnackBarThemeData(
           backgroundColor: AppColors.primaryColor,
           actionTextColor: AppColors.white,
           elevation: 0,
           closeIconColor: AppColors.white,
           showCloseIcon: true,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(
-            top: Radius.circular(15),
-          )),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
         textTheme: const TextTheme(
           bodyLarge: TextStyle(
@@ -107,7 +109,7 @@ class MyApp extends StatelessWidget {
         '/signUpScreen': (context) => const SignUpScreen(),
         '/signUpWithScreen': (context) => const SignupWithScreen(),
         '/accountScreen': (context) => const AccountScreen(),
-        '/mainScreen': (context) => MainScreen(),
+        '/mainScreen': (context) => const MainScreen(),
       },
     );
   }
@@ -153,6 +155,8 @@ class _MainScreenState extends State<MainScreen> {
       body: PageView(
         controller: _pageController,
         onPageChanged: _onPageChanged,
+        physics: NeverScrollableScrollPhysics(),
+
         children: _pages,
       ),
       bottomNavigationBar: BottomNavBar(

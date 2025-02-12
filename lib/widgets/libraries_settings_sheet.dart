@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart'; // shared_preferenc
 import 'package:flutter_pkgscan/services/entities_service.dart';
 import 'package:flutter_pkgscan/widgets/custom_dropdown_tile_single.dart';
 
+import '../constants/app_colors.dart';
 import '../constants/text_constants.dart';
 import 'custom_dropdown_tile.dart';
 import 'custom_fields.dart';
@@ -214,7 +215,7 @@ class _LibrariesSettingsSheetState extends State<LibrariesSettingsSheet> {
           bottom:
               MediaQuery.of(context).viewInsets.bottom, // Klavyeye göre padding
         ),
-        child:isLoading? Center(child: CircularProgressIndicator( color: Colors.red,),) : Column(
+        child:isLoading? Center(child: CircularProgressIndicator( color: AppColors.primaryColor,),) : Column(
           children: [
             Expanded(
               child: SingleChildScrollView(

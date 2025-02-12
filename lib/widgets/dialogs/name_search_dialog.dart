@@ -5,7 +5,7 @@ import 'package:flutter_pkgscan/widgets/auth_button.dart';
 import '../../constants/text_constants.dart';
 import '../custom_fields.dart';
 
-Future<void> showNameSearchDialog(BuildContext context,String entityId) {
+Future<void> showNameSearchDialog(BuildContext context, String entityId) {
   TextEditingController searchController = TextEditingController();
   TextEditingController pullingCountController = TextEditingController();
 
@@ -27,21 +27,25 @@ Future<void> showNameSearchDialog(BuildContext context,String entityId) {
             mainAxisSize: MainAxisSize.min,
             children: [
               CustomFieldWithoutIcon(
-                label: TextConstants.search,
+                label: TextConstants.searchProduct,
                 controller: searchController,
                 textInputType: TextInputType.text,
               ),
-              CustomFieldWithoutIcon(
-                label: TextConstants.howMuchProductWillBePulled,
-                controller: pullingCountController,
-                textInputType: TextInputType.number,
-              ),
+              // CustomFieldWithoutIcon(
+              //   label: TextConstants.howMuchProductWillBePulled,
+              //   controller: pullingCountController,
+              //   textInputType: TextInputType.number,
+              // ),
               SizedBox(
-                width: MediaQuery.of(context).size.width*0.4,
-                child: AuthButton(title: TextConstants.search, onTap: () {
-                  NameSearchService().onTitleSend(context, searchController.text, entityId);
-                  Navigator.pop(context);
-                },),
+                width: MediaQuery.of(context).size.width * 0.4,
+                child: AuthButton(
+                  title: TextConstants.search,
+                  onTap: () {
+                    NameSearchService()
+                        .onTitleSend(context, searchController.text, entityId);
+                    Navigator.pop(context);
+                  },
+                ),
               ),
               SizedBox(height: 16),
             ],

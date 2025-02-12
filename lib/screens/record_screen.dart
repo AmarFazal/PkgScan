@@ -8,6 +8,7 @@ import '../constants/text_constants.dart';
 import '../services/entities_service.dart';
 import '../services/handle_image_upload.dart';
 import '../services/record_service.dart';
+import '../utils/records/record_helpers.dart';
 import '../widgets/attribute_widgets.dart';
 import '../widgets/custom_center_title_button.dart';
 import '../widgets/custom_fields.dart';
@@ -48,6 +49,7 @@ class _RecordScreenState extends State<RecordScreen> {
   Map<String, String> imageValues = {};
   Map<String, dynamic> oldImageValues = {};
   late Map<String, bool> expandedSections;
+  Map<String, bool> isLoadingMap = {};
 
   @override
   void initState() {
@@ -78,6 +80,7 @@ class _RecordScreenState extends State<RecordScreen> {
           newValue, oldImageValues);
       setState(() {
         oldImageValues[key] = newValue; // Make sure to update oldImageValues
+        imageValues[key] = newValue[key]; // Make sure to update oldImageValues
       });
     }
   }
@@ -127,10 +130,9 @@ class _RecordScreenState extends State<RecordScreen> {
     Navigator.pop(context);
   }
 
-// Fetch the record data and update state with the retrieved values
   Future<void> _fetchRecordData() async {
     final data = await _recordService.retrieveRecords(
-        context, widget.entitiesId ?? 'Somethings went wrong', '');
+        context, widget.entitiesId ?? 'Something went wrong', '');
 
     if (data != null && data.isNotEmpty) {
       final record = data[0]['records'][widget.index];
@@ -138,9 +140,11 @@ class _RecordScreenState extends State<RecordScreen> {
         allRecords = record;
 
         // Initialize controllers, boolean values, and image values dynamically
-        _initializeControllers(record['data']);
-        _initializeDynamicBooleans(record['data']);
-        _initializeImageValues(record['data']);
+        RecordHelpers.initializeControllers(
+            _controllers, oldValues, record['data']);
+        RecordHelpers.initializeDynamicBooleans(
+            dynamicBooleans, oldBooleanValues, record['data']);
+        RecordHelpers.initializeImageValues(imageValues, record['data']);
 
         // Organize and sort keys for dynamic lists
         _prepareCombinedList(record['data']);
@@ -148,46 +152,6 @@ class _RecordScreenState extends State<RecordScreen> {
     }
   }
 
-// Initialize the text controllers for each field dynamically
-  void _initializeControllers(Map<String, dynamic> data) {
-    data.forEach((key, value) {
-      if (!_controllers.containsKey(key)) {
-        _controllers[key] = TextEditingController(text: value?.toString());
-        oldValues[key] = value?.toString() ?? '';
-      }
-    });
-  }
-
-// Initialize the dynamic boolean values based on the data
-  void _initializeDynamicBooleans(Map<String, dynamic> data) {
-    data.forEach((key, value) {
-      if (!dynamicBooleans.containsKey(key)) {
-        dynamicBooleans[key] = _parseBoolean(value);
-        oldBooleanValues[key] = value?.toString() ?? '';
-      }
-    });
-  }
-
-// Initialize image values based on the data
-  void _initializeImageValues(Map<String, dynamic> data) {
-    data.forEach((key, value) {
-      if (!imageValues.containsKey(key)) {
-        imageValues[key] = value?.toString() ?? '';
-      }
-    });
-  }
-
-// Parse the value to a boolean (handles both string and boolean types)
-  bool _parseBoolean(dynamic value) {
-    if (value is String) {
-      return value.toLowerCase() == 'true';
-    } else if (value is bool) {
-      return value;
-    }
-    return false;
-  }
-
-// Prepare a combined list of image, title, and MSRP keys
   void _prepareCombinedList(Map<String, dynamic> data) {
     List<String> imageKeys = _getSortedKeysStartingWith(data, "Image ");
     List<String> titleKeys = _getSortedKeysStartingWith(data, "Title ");
@@ -213,6 +177,8 @@ class _RecordScreenState extends State<RecordScreen> {
     // Expand the list for each pulled listing
     isExpandedList = List<bool>.filled(combinedList.length, false);
   }
+
+// Prepare a combined list of image, title, and MSRP keys
 
 // Retrieve sorted keys starting with the specified prefix
   List<String> _getSortedKeysStartingWith(
@@ -408,133 +374,70 @@ class _RecordScreenState extends State<RecordScreen> {
                                             height:
                                                 200, // Fotoğrafların yüksekliği
                                             child: ListView.builder(
-
                                               scrollDirection: Axis.horizontal,
-                                              // Yatay kaydırma
-                                              itemCount:
-                                                  entity!['groupedAttributes']
-                                                              ['Manual Images']
-                                                          .length +
-                                                      1,
-                                              // +1 ekledik (Add Image butonu için)
+                                              itemCount: entity!['groupedAttributes']['Manual Images'].length + 1,
                                               itemBuilder: (context, index) {
-                                                List<String>
-                                                    emptyAttributeNames = [];
+                                                List<String> emptyAttributeNames = [];
 
                                                 // Boş attribute'ları kontrol et ve listeyi doldur
-                                                for (var attribute in entity![
-                                                        'groupedAttributes']
-                                                    ['Manual Images']) {
-                                                  final attributeName =
-                                                      attribute['name'];
-                                                  final imageValue =
-                                                      imageValues[
-                                                          attributeName];
-                                                  if ((imageValue == null ||
-                                                          imageValue.isEmpty) &&
-                                                      attributeName.contains(
-                                                          "Manual Image")) {
-                                                    emptyAttributeNames
-                                                        .add(attributeName);
+                                                for (var attribute in entity!['groupedAttributes']['Manual Images']) {
+                                                  final attributeName = attribute['name'];
+                                                  final imageValue = imageValues[attributeName];
+                                                  if ((imageValue == null || imageValue.isEmpty) && attributeName.contains("Manual Image")) {
+                                                    emptyAttributeNames.add(attributeName);
                                                   }
                                                 }
 
-                                                if (index ==
-                                                    entity!['groupedAttributes']
-                                                            ['Manual Images']
-                                                        .length) {
+                                                if (index == entity!['groupedAttributes']['Manual Images'].length) {
                                                   // Son eleman, Add Image butonu olacak
                                                   return GestureDetector(
                                                     onTap: () async {
-                                                      final List<String>?
-                                                          uploadedImageUrls =
-                                                          await handleImageUpload(
+                                                      final List<String>? uploadedImageUrls = await handleImageUpload(
                                                         context,
                                                         widget.entitiesId,
                                                         widget.recordId,
                                                         emptyAttributeNames,
-                                                        // Boş attribute'ları gönder
                                                         oldImageValues,
                                                         imageValues,
-                                                        (attributeName,
-                                                            imageUrl) {
-                                                          // Callback fonksiyonu: State'i güncelle
+                                                            (attributeName, imageUrl) {
                                                           setState(() {
-                                                            imageValues[
-                                                                    attributeName] =
-                                                                imageUrl;
+                                                            imageValues[attributeName] = imageUrl;
                                                           });
                                                         },
+                                                        isLoadingMap, // isLoadingMap'i ilet
                                                       );
 
-                                                      if (uploadedImageUrls !=
-                                                          null) {
+                                                      if (uploadedImageUrls != null) {
                                                         await _fetchRecordData();
                                                       } else {
-                                                        debugPrint(
-                                                            "Image upload failed or canceled.");
-                                                      }
-
-                                                      if (emptyAttributeNames
-                                                          .isNotEmpty) {
-                                                        // Fotoğraf yükleme işlemi
-                                                      } else {
-                                                        showSnackBar(context,
-                                                            "No empty Manual Image available!");
+                                                        showSnackBar(context, "Image upload failed or canceled. Please Try Again.");
                                                       }
                                                     },
                                                     child: Container(
                                                       width: 150,
                                                       height: 200,
-                                                      margin:
-                                                          const EdgeInsets.all(
-                                                              8.0),
+                                                      margin: const EdgeInsets.all(8.0),
                                                       decoration: BoxDecoration(
-                                                        image:
-                                                            const DecorationImage(
-                                                          image: AssetImage(
-                                                              "assets/images/background_1.png"),
-                                                          fit: BoxFit
-                                                              .cover, // Resmi tamamen kaplamak için
+                                                        image: const DecorationImage(
+                                                          image: AssetImage("assets/images/background_1.png"),
+                                                          fit: BoxFit.cover,
                                                         ),
-                                                        color: Colors.white
-                                                            .withOpacity(0.4),
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(10),
+                                                        color: Colors.white.withOpacity(0.4),
+                                                        borderRadius: BorderRadius.circular(10),
                                                       ),
                                                       child: Column(
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .center,
+                                                        mainAxisAlignment: MainAxisAlignment.center,
                                                         children: [
-                                                          const Icon(
-                                                              Icons.add_a_photo,
-                                                              size: 40,
-                                                              color: AppColors
-                                                                  .primaryColor),
-                                                          const SizedBox(
-                                                              height: 5),
+                                                          const Icon(Icons.add_a_photo, size: 40, color: AppColors.primaryColor),
+                                                          const SizedBox(height: 5),
                                                           Text(
-                                                            TextConstants
-                                                                .addImage,
-                                                            style: Theme.of(
-                                                                    context)
-                                                                .textTheme
-                                                                .displayMedium
-                                                                ?.copyWith(
-                                                                    color: AppColors
-                                                                        .primaryColor),
+                                                            TextConstants.addImage,
+                                                            style: Theme.of(context).textTheme.displayMedium?.copyWith(color: AppColors.primaryColor),
                                                           ),
-                                                          const SizedBox(
-                                                              height: 5),
-
+                                                          const SizedBox(height: 5),
                                                           Text(
-                                                            "${TextConstants.youHave + emptyAttributeNames.length.toString() + TextConstants.photosLeft}",
-                                                            style: Theme.of(
-                                                                    context)
-                                                                .textTheme
-                                                                .displaySmall?.copyWith(color: AppColors.textColor),
+                                                            TextConstants.youHave + emptyAttributeNames.length.toString() + TextConstants.photosLeft,
+                                                            style: Theme.of(context).textTheme.displaySmall?.copyWith(color: AppColors.textColor),
                                                             textAlign: TextAlign.center,
                                                           ),
                                                         ],
@@ -543,99 +446,58 @@ class _RecordScreenState extends State<RecordScreen> {
                                                   );
                                                 }
 
-                                                final attribute =
-                                                    entity!['groupedAttributes']
-                                                            ['Manual Images']
-                                                        [index];
-                                                final imageUrl = imageValues[
-                                                    attribute['name']];
+                                                final attribute = entity!['groupedAttributes']['Manual Images'][index];
+                                                final imageUrl = imageValues[attribute['name']];
 
-                                                if (imageUrl == null ||
-                                                    imageUrl.isEmpty) {
-                                                  return Container(); // Boş container, hata vermeyi engeller
+                                                if (imageUrl == null || imageUrl.isEmpty) {
+                                                  return Container();
                                                 }
 
                                                 return Padding(
-                                                  padding:
-                                                      const EdgeInsets.all(8.0),
+                                                  padding: const EdgeInsets.all(8.0),
                                                   child: Stack(
                                                     children: [
                                                       GestureDetector(
                                                         onTap: () {
                                                           showDialog(
                                                             context: context,
-                                                            builder:
-                                                                (context) =>
-                                                                    Dialog(
-                                                              backgroundColor:
-                                                                  Colors
-                                                                      .transparent,
-                                                              shape:
-                                                                  RoundedRectangleBorder(
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                            25),
+                                                            builder: (context) => Dialog(
+                                                              backgroundColor: Colors.transparent,
+                                                              shape: RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius.circular(25),
                                                               ),
                                                               child: Stack(
                                                                 children: [
                                                                   ClipRRect(
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
-                                                                            25),
-                                                                    child: Image.network(
-                                                                        imageUrl,
-                                                                        fit: BoxFit
-                                                                            .contain),
+                                                                    borderRadius: BorderRadius.circular(25),
+                                                                    child: Image.network(imageUrl, fit: BoxFit.contain),
                                                                   ),
                                                                   Positioned(
                                                                     top: 20,
                                                                     right: 20,
-                                                                    child:
-                                                                        HeaderIcon(
-                                                                      icon: Icons
-                                                                          .close_rounded,
-                                                                      onTap: () =>
-                                                                          Navigator.pop(
-                                                                              context),
-                                                                      iconColor:
-                                                                          Colors
-                                                                              .white,
-                                                                      color: Colors
-                                                                          .black38,
-                                                                      iconSize:
-                                                                          15,
+                                                                    child: HeaderIcon(
+                                                                      icon: Icons.close_rounded,
+                                                                      onTap: () => Navigator.pop(context),
+                                                                      iconColor: Colors.white,
+                                                                      color: Colors.black38,
+                                                                      iconSize: 15,
                                                                     ),
                                                                   ),
                                                                   Positioned(
                                                                     bottom: 20,
                                                                     right: 20,
-                                                                    child:
-                                                                        HeaderIcon(
-                                                                      icon: Icons
-                                                                          .delete,
-                                                                      onTap:
-                                                                          () {
-                                                                        setState(
-                                                                            () {
-                                                                          oldImageValues[attribute['name']] =
-                                                                              imageValues[attribute['name']] = '';
+                                                                    child: HeaderIcon(
+                                                                      icon: Icons.delete,
+                                                                      onTap: () {
+                                                                        setState(() {
+                                                                          oldImageValues[attribute['name']] = imageValues[attribute['name']] = '';
                                                                         });
-                                                                        checkImageForChanges(
-                                                                            attribute['name'],
-                                                                            {
-                                                                              attribute['name']: ''
-                                                                            });
-                                                                        Navigator.pop(
-                                                                            context);
+                                                                        checkImageForChanges(attribute['name'], {attribute['name']: ''});
+                                                                        Navigator.pop(context);
                                                                       },
-                                                                      iconColor:
-                                                                          Colors
-                                                                              .white,
-                                                                      color: Colors
-                                                                          .black38,
-                                                                      iconSize:
-                                                                          15,
+                                                                      iconColor: Colors.white,
+                                                                      color: Colors.black38,
+                                                                      iconSize: 15,
                                                                     ),
                                                                   ),
                                                                 ],
@@ -644,9 +506,7 @@ class _RecordScreenState extends State<RecordScreen> {
                                                           );
                                                         },
                                                         child: ClipRRect(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(10),
+                                                          borderRadius: BorderRadius.circular(10),
                                                           child: Image.network(
                                                             imageUrl,
                                                             fit: BoxFit.cover,
@@ -665,29 +525,22 @@ class _RecordScreenState extends State<RecordScreen> {
                                                             icon: Icons.delete,
                                                             onTap: () {
                                                               setState(() {
-                                                                oldImageValues[
-                                                                        attribute[
-                                                                            'name']] =
-                                                                    imageValues[
-                                                                        attribute[
-                                                                            'name']] = '';
+                                                                oldImageValues[attribute['name']] = imageValues[attribute['name']] = '';
                                                               });
-                                                              checkImageForChanges(
-                                                                  attribute[
-                                                                      'name'],
-                                                                  {
-                                                                    attribute[
-                                                                        'name']: ''
-                                                                  });
+                                                              checkImageForChanges(attribute['name'], {attribute['name']: ''});
                                                             },
-                                                            iconColor:
-                                                                Colors.white,
-                                                            color:
-                                                                Colors.black38,
+                                                            iconColor: Colors.white,
+                                                            color: Colors.black38,
                                                             iconSize: 15,
                                                           ),
                                                         ),
                                                       ),
+                                                      if (isLoadingMap[attribute['name']] == true) // Loader göster
+                                                        Positioned.fill(
+                                                          child: Center(
+                                                            child: CircularProgressIndicator(),
+                                                          ),
+                                                        ),
                                                     ],
                                                   ),
                                                 );

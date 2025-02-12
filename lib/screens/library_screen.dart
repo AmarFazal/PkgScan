@@ -1,5 +1,4 @@
-import 'dart:developer';
-import 'dart:io';
+
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -15,21 +14,13 @@ import '../../widgets/header_icon.dart';
 import '../constants/app_colors.dart';
 import '../constants/text_constants.dart';
 import '../services/entities_service.dart';
-import 'package:permission_handler/permission_handler.dart';
-
-import 'package:syncfusion_flutter_xlsio/xlsio.dart' as xls;
+import '../utils/records/record_helpers.dart';
 import '../utils/scroll_listener_helper.dart';
 import '../utils/scroll_utils.dart';
-import '../widgets/auth_button.dart';
-import '../widgets/custom_dropdown_tile_single.dart';
-import '../widgets/custom_fields.dart';
 import '../widgets/dialogs/barcode_search_dialog.dart';
 import '../widgets/dialogs/camera_search_dialog.dart';
 import '../widgets/dialogs/libraries_settings_sheet.dart';
 import '../widgets/dialogs/name_search_dialog.dart';
-import '../widgets/entries_checkbox.dart';
-import '../widgets/entries_image_container.dart';
-import '../widgets/scrape_status_tile.dart';
 import '../widgets/screen_loading.dart';
 
 class LibraryScreen extends StatefulWidget {
@@ -50,6 +41,7 @@ class LibraryScreen extends StatefulWidget {
 class _LibraryScreenState extends State<LibraryScreen> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
+  FocusNode focusNode = FocusNode();
   bool _isVisible = true;
   late ScrollListenerHelper _scrollHelper;
   final EntitiesService _entitiesService = EntitiesService();
@@ -57,6 +49,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   List allRecords = []; // Manifest listesi
   bool isLoading = true; // Yüklenme durumu
   bool isDeleting = false;
+  bool isAddingRecord = false;
   Map<String, dynamic> localSettings = {};
   Map<String, TextEditingController> _controllers = {};
   Map<String, dynamic> oldValues = {};
@@ -79,11 +72,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
       },
     );
     _scrollHelper.addListener();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      focusNode.unfocus();
+    });
   }
 
   @override
   void dispose() {
     _scrollHelper.dispose();
+    _searchController.dispose();
+    focusNode.dispose();
     super.dispose();
   }
 
@@ -102,14 +100,27 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Future<void> _retrieveEntity() async {
-    entity = await _entitiesService.retrieveEntities(context, widget.entitiesId);
-    if (entity != null) {
-      localSettings = entity!['manifest_settings'];
+    try {
+      final fetchedEntity =
+      await _entitiesService.retrieveEntities(context, widget.entitiesId);
+
+      if (fetchedEntity == null) {
+        showSnackBar(context, 'Failed to retrieve entity.');
+        return;
+      }
+
+      setState(() {
+        entity = fetchedEntity;
+        localSettings = entity!['manifest_settings'] ?? {};
+      });
+
       debugPrint("These are The Fields in Quick Edit ${localSettings['Fields in Quick Edit']}");
-    } else {
-      showSnackBar(context, 'Failed to retrieve entity.');
+    } catch (e) {
+      debugPrint("Error retrieving entity: $e");
+      showSnackBar(context, 'Error retrieving entity.');
     }
   }
+
 
   void _scrollToTop() {
     ScrollUtils.scrollToTop(_scrollController, () {
@@ -157,13 +168,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
           HeaderIcon(
             icon: Icons.file_open_rounded,
             onTap: () {
-              List<dynamic> allData =
-                  allRecords.map((record) => record['data']).toList();
+              List<dynamic> allData = allRecords
+                  .map((record) => record['data'])
+                  .where((element) => element is Map) // Sadece Map türündeki elemanları seç
+                  .toList();
+
               List<String> allKeys = allData
-                  .where((element) =>
-                      element is Map) // Sadece Map türündeki elemanları seç
                   .expand((element) => (element as Map).keys) // Key'leri al
                   .cast<String>() // Türü List<String>'e dönüştür
+                  .where((key) {
+                // 'Manual Image', 'Manual MSRP' veya 'Manual Title' ile başlamayan key'leri al
+                return !(key.startsWith('Image ') ||
+                    key.startsWith('MSRP ') ||
+                    key.startsWith('Title '));
+              })
                   .toSet() // Tekrarlayan key'leri filtrele
                   .toList(); // Listeye çevir
 
@@ -216,6 +234,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           duration: const Duration(milliseconds: 300),
           child: CustomSearchBar(
             controller: _searchController,
+            focusNode: focusNode,
             onTap: () {
               _fetchRecords(_searchController.text.trim());
             },
@@ -278,11 +297,29 @@ class _LibraryScreenState extends State<LibraryScreen> {
           onRefresh: () => _fetchRecords(""),
           child: ListView.builder(
             controller: _scrollController,
-            itemCount: allRecords.length, // Liste boyutuna göre öğe sayısı
+            itemCount: allRecords.length + (isAddingRecord ? 1 : 0),
+            // Ekstra öğe ekleme
             itemBuilder: (context, index) {
-              final record =
-                  allRecords[index]; // İlk düzeydeki 'records' listesine erişim
-              final data = record['data']; // İlgili 'data' kısmına erişim
+              if (index == allRecords.length && isAddingRecord) {
+                // Listenin en altına indicator ekle
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Container(
+                    height: 70,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(25),
+                      color: AppColors.secondaryColor,
+                    ),
+                    child: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                );
+              }
+
+              final record = allRecords[index];
+              final data = record['data'];
+
               return GestureDetector(
                 onTap: () {
                   Navigator.push(
@@ -296,42 +333,34 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       ),
                     ),
                   );
+                  focusNode.unfocus();
                 },
                 child: TableTile(
-                    title: data['Title'] ?? data['Code'] ?? "No Data",
-                    subtitle: data['Scrape Status'] ?? 'No Status',
-                    lot: (data['MSRP'] ?? 'MSRP').toString(),
-                    scrapeStatus: data['Scrape Status'] ?? 'No Status',
-                    image: (data["Pulled Images"]?.isEmpty ?? true)
-                        ? 'https://st4.depositphotos.com/14953852/24787/v/450/depositphotos_247872612-stock-illustration-no-image-available-icon-vector.jpg'
-                        : data["Pulled Images"],
-                    isLoading: isDeleting,
-                    onSwipe: () async {
-                      RecordService().archiveRecord(
-                        context,
-                        allRecords[index]['_id'],
-                        allRecords[index]['entity_id'],
-                        () {
-                          _fetchRecords('');
-                        },
-                      );
-                    },
-                    quickEditWidget: localSettings.isNotEmpty &&
-                            localSettings['Active Quick Edit'] == true
-                        ? GestureDetector(
-                            onTap: () {
-                              showQuickEditDialog(
-                                  context,
-                                  allRecords[index]['_id'],
-                                  widget.entitiesId ?? 'No entities Id');
-                            },
-                            child: const Icon(
-                              Icons.edit,
-                              color: AppColors.primaryColor,
-                              size: 20,
-                            ),
-                          )
-                        : const SizedBox.shrink()),
+                  title: data['Title'] ?? data['Code'] ?? "No Data",
+                  subtitle: data['Scrape Status'] ?? 'No Status',
+                  lot: (data['MSRP'] ?? 'MSRP').toString(),
+                  scrapeStatus: data['Scrape Status'] ?? 'No Status',
+                  image: (data["Pulled Images"]?.isEmpty ?? true)
+                      ? 'https://st4.depositphotos.com/14953852/24787/v/450/depositphotos_247872612-stock-illustration-no-image-available-icon-vector.jpg'
+                      : data["Pulled Images"],
+                  isLoading: isDeleting,
+                  onSwipeLeft: () async {
+                    RecordService().archiveRecord(
+                      context,
+                      allRecords[index]['_id'],
+                      allRecords[index]['entity_id'],
+                      () {
+                        _fetchRecords('');
+                      },
+                    );
+                  },
+                 onSwipeRight: localSettings['Active Quick Edit'] == true
+                     ?() {
+                    print('Swiped Right');
+                    showQuickEditDialog(context, record['_id'], widget.entitiesId ?? 'Something went wrong');
+                  }
+                      : null,
+                ),
               );
             },
           ),
@@ -363,12 +392,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
             const Spacer(),
             HeaderIcon(
               onTap: () async {
+                setState(() {
+                  isAddingRecord = true;
+                });
+
                 // Text search dialog açılıyor ve kapanması bekleniyor
                 await showNameSearchDialog(
                     context, widget.entitiesId ?? 'Something went wrong');
 
                 // Dialog kapandıktan sonra verileri tekrar fetch et
-                _fetchRecords('');
+                await _fetchRecords('');
+
+                setState(() {
+                  isAddingRecord = false;
+                });
               },
               letter: "A",
               letterSize: 18,
@@ -377,11 +414,22 @@ class _LibraryScreenState extends State<LibraryScreen> {
             const SizedBox(width: 8),
             HeaderIcon(
               onTap: () async {
-                // Kamera dialog açılıyor ve kapanması bekleniyor
-                await showCameraDialog(
-                    context, widget.entitiesId ?? 'Something went wrong');
+                setState(() {
+                  isAddingRecord = true; // İşlem başladı, loader gözüksün
+                });
 
-                // Dialog kapandıktan sonra verileri tekrar fetch et
+                showCameraDialog(
+                  context,
+                  widget.entitiesId ?? 'Something went wrong',
+                  () {
+                    setState(() {
+                      isAddingRecord =
+                          false; // addRecord işlemi tamamlandı, loader kapansın
+                    });
+                    _fetchRecords('');
+                  },
+                );
+
                 _fetchRecords('');
               },
               icon: Icons.remove_red_eye,
@@ -391,11 +439,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
             const SizedBox(width: 8),
             HeaderIcon(
               onTap: () async {
-                // Barcode arama dialog açılıyor ve kapanması bekleniyor
-                await showBarcodeSearchDialog(
+                setState(() {
+                  isAddingRecord = true; // İşlem başladı, loader gözüksün
+                });
+
+                bool scanResult = await showBarcodeSearchDialog(
                     context, widget.entitiesId ?? 'Something went wrong');
 
-                // Dialog kapandıktan sonra verileri tekrar fetch et
+                setState(() {
+                  isAddingRecord =
+                      scanResult; // addRecord işlemi tamamlandı, loader kapansın
+                });
+
                 _fetchRecords('');
               },
               icon: CupertinoIcons.barcode,
@@ -433,15 +488,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
-
-
-
-
-
-
-
-
-
   // Method to handle sending updated data
   void sendUpdatedData(
       String key, Map<String, dynamic> newValue, String entitiesId) {
@@ -478,51 +524,28 @@ class _LibraryScreenState extends State<LibraryScreen> {
     Navigator.pop(context);
   }
 
-  Future<void> _fetchRecordData(int index) async {
-    final data = await RecordService().retrieveRecords(
-        context, widget.entitiesId ?? 'Somethings went wrong', '');
-    final record = data[0]['records'][index];
-    setState(() {
-      if (data != null) {
+  final RecordService _recordService = RecordService();
+  Future<void> _fetchRecordData() async {
+    final data = await _recordService.retrieveRecords(
+        context, widget.entitiesId ?? 'Something went wrong', '');
+
+    if (data != null && data.isNotEmpty) {
+      final record = data[0]['records'][2];
+      setState(() {
         allRecords = record;
 
-        // Dinamik olarak controller'ları oluştur
-        record['data'].forEach((key, value) {
-          if (!_controllers.containsKey(key)) {
-            _controllers[key] = TextEditingController(text: value?.toString());
-            oldValues[key] = value?.toString() ?? '';
-          }
-        });
-
-        // Dinamik olarak controller'ları oluştur
-        record['data'].forEach((key, value) {
-          if (!dynamicBooleans.containsKey(key)) {
-            // String değeri bool'a dönüştürmek için kontrol
-            if (value is String) {
-              dynamicBooleans[key] = value.toLowerCase() == 'true';
-            } else if (value is bool) {
-              dynamicBooleans[key] = value;
-            } else {
-              // Eğer value ne String ne de bool ise, bir varsayılan değer kullanabilirsiniz
-              dynamicBooleans[key] = false;
-            }
-            oldBooleanValues[key] =
-                value is bool ? value : value?.toString() ?? '';
-          }
-        });
-      }
-      isLoading = false;
-    });
+        // Initialize controllers, boolean values, and image values dynamically
+        RecordHelpers.initializeControllers(
+            _controllers, oldValues, record['data']);
+        RecordHelpers.initializeDynamicBooleans(
+            dynamicBooleans, oldBooleanValues, record['data']);
+        RecordHelpers.initializeImageValues(imageValues, record['data']);
+      });
+    }
   }
 
-  void showQuickEditDialog(
-    BuildContext context,
-    String recordId,
-    String entityId,
-  ) {
-    final fieldsInQuickEdit = entity!['manifest_settings']
-            ?['Fields in Quick Edit'] as List<dynamic>? ??
-        [];
+  void showQuickEditDialog(BuildContext context, String recordId, String entityId) {
+    final fieldsInQuickEdit = (entity!['manifest_settings']['Fields in Quick Edit'] as List?)?.cast<String>() ?? [];
 
     showModalBottomSheet(
       isScrollControlled: true,
@@ -532,37 +555,24 @@ class _LibraryScreenState extends State<LibraryScreen> {
           padding: EdgeInsets.only(
             left: 16.0,
             right: 16.0,
-            top: 16.0,
-            bottom: MediaQuery.of(context)
-                .viewInsets
-                .bottom, // Klavyeye göre padding
+            bottom: MediaQuery.of(context).viewInsets.bottom, // Klavyeye göre padding
           ),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(height: 20),
-                // Dinamik alanları oluşturma
+                const SizedBox(height: 8),
+                // `fieldsInQuickEdit` içinde bulunan her bir öğeyi `Text` widget olarak ekleyelim
                 ...fieldsInQuickEdit.map<Widget>((field) {
-                  //print("Bu Manifestin entity içi ${entity!['groupedAttributes']["Main Information"]}");
-                  return entity!['groupedAttributes']
-                          .map<Widget>((attribute) {
-                            print("Baslangic ${entity!["groupedAttributes"]}");
-                      return AttributeWidgets.buildAttributeWidget(
-                          attribute: attribute,
-                          controllers: _controllers,
-                          dynamicBooleans: dynamicBooleans,
-                          imageValues: {},
-                          oldImageValues: oldImageValues,
-                          header: 'Main Information',
-                          entitiesId: entityId,
-                          recordId: recordId,
-                          onChanged: (p3) {},
-                          onDelete: () {},
-                          context: context);
-                    },
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      field, // Listedeki elemanları gösteriyoruz
+                      style: const TextStyle(color: Colors.red, fontSize: 16, fontWeight: FontWeight.w500),
+                    ),
                   );
                 }).toList(),
+                const SizedBox(height: 8),
               ],
             ),
           ),
@@ -570,4 +580,5 @@ class _LibraryScreenState extends State<LibraryScreen> {
       },
     );
   }
+
 }

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../services/cloud_service.dart';
 import '../services/record_service.dart';
 import '../utils/image_utils.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 import '../widgets/snack_bar.dart';
+import 'cloud_service.dart';
 
 Future<List<String>?> handleImageUpload(
     BuildContext context,
@@ -15,6 +15,7 @@ Future<List<String>?> handleImageUpload(
     Map oldImageValues,
     Map imageValues,
     Function(String attributeName, String imageUrl) onImageUploaded, // Callback fonksiyonu
+    Map<String, bool> isLoadingMap, // Yükleme durumlarını tutacak Map
     ) async {
   final ImagePicker _picker = ImagePicker();
 
@@ -63,6 +64,9 @@ Future<List<String>?> handleImageUpload(
         images = [image];
       }
     }
+    for (var emptyAttributeName in emptyAttributeNames.take(images!.length)) {
+      isLoadingMap[emptyAttributeName] = true;
+    }
 
     if (images != null && images.isNotEmpty) {
       if (images.length > 10) {
@@ -78,14 +82,19 @@ Future<List<String>?> handleImageUpload(
       try {
         List<String> uploadedImageUrls = [];
 
+        // **Fotoğraflar seçildiği anda yükleme durumunu true yap**
+
+
+        // **Cloud'a yükleme işlemi burada başlıyor**
         for (int i = 0; i < images.length; i++) {
+          final emptyAttributeName = emptyAttributeNames[i];
+
           File selectedImage = File(images[i].path);
           File compressedImage = await compressImage(selectedImage);
           final String? imageUrl = await CloudService()
               .uploadPhotoToCloud(context, compressedImage.path);
 
           if (imageUrl != null) {
-            final emptyAttributeName = emptyAttributeNames[i];
             // Callback fonksiyonunu çağır
             onImageUploaded(emptyAttributeName, imageUrl);
 
@@ -99,6 +108,9 @@ Future<List<String>?> handleImageUpload(
 
             uploadedImageUrls.add(imageUrl);
           }
+
+          // **Yükleme tamamlandıktan sonra false yap**
+          isLoadingMap[emptyAttributeName] = false;
         }
         showSnackBar(context, "${images.length} images uploaded successfully!");
         return uploadedImageUrls;
@@ -107,6 +119,7 @@ Future<List<String>?> handleImageUpload(
         return null;
       }
     }
+
   }
 
   return null;

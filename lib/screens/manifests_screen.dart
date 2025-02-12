@@ -37,6 +37,7 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
   List<Map<String, dynamic>> manifests = []; // Manifest listesi
   List<Map<String, dynamic>> searchedManifests = []; // Manifest listesi
   bool isLoading = true; // Yüklenme durumu
+  FocusNode focusNode = FocusNode();
   List<String> manifestNames = [];
   Map<int, IconData?> selectedIcons = {};
   List<Map<String, dynamic>> allRecords = []; // Manifest listesi
@@ -59,10 +60,9 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
     _scrollHelper.addListener();
     fetchManifestsAndUpdate(); // Veriyi çekip listeyi güncelle
 
-    // checkboxStates = widget.data.keys.fold<Map<String, bool>>({}, (map, key) {
-    //   map[key] = false;
-    //   return map;
-    // });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      focusNode.unfocus();
+    });
   }
 
   // Manifest verilerini çekip listeyi güncelleme fonksiyonu
@@ -76,33 +76,11 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
     });
   }
 
-  //   Future<void> _retrieveEntity() async {
-  //   entity =
-  //       await _entitiesService.retrieveEntities(context, widget.entitiesId);
-  //   if (entity != null) {
-  //     // debugPrint('Entity retrieved: ${entity?['subheaderOrder']}');
-  //     setState(() {}); // Arayüzü güncellemek için
-  //   } else {
-  //     debugPrint('Failed to retrieve entity.');
-  //   }
-  // }
-
-  // Future<void> _fetchRecords() async {
-  //   final data = await RecordService()
-  //       .retrieveRecords(context, widget.entitiesId ?? 'Somethings went wrong');
-
-  //   setState(() {
-  //     if (data != null && data.isNotEmpty) {
-  //       // Verilerin boş olmadığından emin ol
-  //       allRecords = data[0]['records']; // Eğer veri varsa, devam et
-  //     } else {}
-  //     isLoading = false; // Yükleme durumu kapat
-  //   });
-  // }
-
   @override
   void dispose() {
     _scrollHelper.dispose();
+    _searchController.dispose();
+    focusNode.dispose();
     super.dispose();
   }
 
@@ -211,6 +189,7 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
         duration: const Duration(milliseconds: 300),
         child: CustomSearchBar(
           controller: _searchController,
+          focusNode: focusNode,
           onTap: () => _filterManifests(_searchController.text),
           onChange: (value) => _filterManifests(_searchController.text),
           onClear: () {
@@ -356,6 +335,7 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
                     ),
                   ),
                 );
+                focusNode.unfocus();
               },
               onLongPress: () {
                 showManifestSettingsDialog(

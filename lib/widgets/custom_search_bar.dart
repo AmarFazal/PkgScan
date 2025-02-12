@@ -8,13 +8,14 @@ class CustomSearchBar extends StatelessWidget {
   final VoidCallback onTap;
   final ValueChanged? onChange;
   final VoidCallback onClear;
+  final FocusNode? focusNode;
 
   const CustomSearchBar({
     super.key,
     required this.controller,
     required this.onTap,
     this.onChange,
-    required this.onClear,
+    required this.onClear, this.focusNode,
   });
 
   @override
@@ -25,6 +26,7 @@ class CustomSearchBar extends StatelessWidget {
           child: TextField(
             controller: controller,
             onChanged: onChange,
+            focusNode: focusNode,
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(horizontal: 10),
               filled: true,

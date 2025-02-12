@@ -5,15 +5,23 @@ class AuthButton extends StatelessWidget {
   final String title;
   final VoidCallback onTap;
   final Color? buttonColor;
+  final TextStyle? textStyle;
+  final double? buttonHeight;
 
-  const AuthButton({super.key, required this.title, required this.onTap, this.buttonColor = AppColors.primaryColor});
+  const AuthButton({
+    super.key,
+    required this.title,
+    required this.onTap,
+    this.buttonColor = AppColors.primaryColor,
+    this.textStyle, this.buttonHeight = 47,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 47,
+        height: buttonHeight,
         decoration: BoxDecoration(
           color: buttonColor,
           borderRadius: BorderRadius.circular(50),
@@ -21,10 +29,8 @@ class AuthButton extends StatelessWidget {
         child: Center(
           child: Text(
             title,
-            style: Theme.of(context)
-                .textTheme
-                .displayLarge
-                ?.copyWith(color: AppColors.white),
+            style: textStyle ??
+                Theme.of(context).textTheme.displayLarge?.copyWith(color: AppColors.white),
           ),
         ),
       ),
