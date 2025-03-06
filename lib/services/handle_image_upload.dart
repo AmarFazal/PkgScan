@@ -10,12 +10,13 @@ import 'cloud_service.dart';
 Future<List<String>?> handleImageUpload(
     BuildContext context,
     String entitiesId,
-    String recordId,
+    String? recordId,
     List<String> emptyAttributeNames,
     Map oldImageValues,
     Map imageValues,
     Function(String attributeName, String imageUrl) onImageUploaded, // Callback fonksiyonu
     Map<String, bool> isLoadingMap, // Yükleme durumlarını tutacak Map
+    bool isNew,
     ) async {
   final ImagePicker _picker = ImagePicker();
 
@@ -70,12 +71,12 @@ Future<List<String>?> handleImageUpload(
 
     if (images != null && images.isNotEmpty) {
       if (images.length > 10) {
-        showSnackBar(context, "You can select up to 10 images.");
+        showSnackBar(context: context, message: "You can select up to 10 images.");
         images = images.sublist(0, 10);
       }
 
       if (emptyAttributeNames.length < images.length) {
-        showSnackBar(context, "Not enough empty Manual Image slots available.");
+        showSnackBar(context: context, message: "Not enough empty Manual Image slots available.");
         return null;
       }
 
@@ -98,13 +99,13 @@ Future<List<String>?> handleImageUpload(
             // Callback fonksiyonunu çağır
             onImageUploaded(emptyAttributeName, imageUrl);
 
-            await RecordService().updateRecord(
+            isNew==false?await RecordService().updateRecord(
               context,
               entitiesId,
               recordId,
               {emptyAttributeName: imageUrl},
               oldImageValues,
-            );
+            ):null;
 
             uploadedImageUrls.add(imageUrl);
           }
@@ -112,10 +113,10 @@ Future<List<String>?> handleImageUpload(
           // **Yükleme tamamlandıktan sonra false yap**
           isLoadingMap[emptyAttributeName] = false;
         }
-        showSnackBar(context, "${images.length} images uploaded successfully!");
+        showSnackBar(context: context, message: "${images.length} images uploaded successfully!");
         return uploadedImageUrls;
       } catch (e) {
-        showSnackBar(context, "Error during upload: $e");
+        showSnackBar(context: context, message: "Error during upload: $e");
         return null;
       }
     }

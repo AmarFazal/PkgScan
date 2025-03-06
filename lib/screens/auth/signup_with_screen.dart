@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter_pkgscan/services/auth_service.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/text_constants.dart';
 import '../../widgets/custom_center_title_button.dart';
-import '../manifests_screen.dart';
-import 'signup_screen.dart';
-import 'signin_screen.dart';
 
 class SignupWithScreen extends StatefulWidget {
   const SignupWithScreen({super.key});
@@ -59,7 +56,8 @@ class _SignupWithScreenState extends State<SignupWithScreen> {
                   },
                 ),
                 GestureDetector(
-                  onTap: () {
+                  onTap: () async {
+                    AuthService().continueAsGuest();
                     Navigator.pushNamedAndRemoveUntil(context, '/mainScreen',
                         (Route<dynamic> route) => false);
                   },

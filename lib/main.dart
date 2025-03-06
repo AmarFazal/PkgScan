@@ -10,10 +10,15 @@ import 'screens/account_screen.dart';
 import 'screens/auth/signin_screen.dart';
 import 'services/auth_service.dart';
 import 'widgets/bottom_nav_bar.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'models/guest_mode/manifest.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final authService = AuthService();
+  await Hive.initFlutter();
+  Hive.registerAdapter(ManifestAdapter());
+  await Hive.openBox<Manifest>('manifests');
 
   // Kullanıcının oturum açma durumunu kontrol ediyoruz.
   final isLoggedIn = await authService.isUserLoggedIn();
@@ -86,6 +91,11 @@ class MyApp extends StatelessWidget {
             color: AppColors.secondaryTextColor,
             fontWeight: FontWeight.w400,
             fontSize: 12,
+          ),
+          labelSmall: TextStyle(
+            color: AppColors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 10,
           ),
         ),
         buttonTheme: const ButtonThemeData(

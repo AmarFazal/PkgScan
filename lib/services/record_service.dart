@@ -10,11 +10,11 @@ import 'auth_service.dart';
 class RecordService {
   // Add Record
   Future<String?> addRecord(BuildContext context, String entityId,
-      bool isScrape, String scrapeBy, String scrapeValue) async {
+      bool isScrape, String scrapeBy, String scrapeValue, bool isBlankRecord, Map<String, dynamic>? newBlankData) async {
     final String? accessToken = await AuthService().getValidAccessToken();
 
     if (accessToken == null) {
-      showSnackBar(context, 'Access token not found. Please log in again.');
+      showSnackBar(context: context, message: 'Access token not found. Please log in again.');
       return null;
     }
 
@@ -25,12 +25,15 @@ class RecordService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken'
         },
-        body: json.encode({
+        body: isBlankRecord == false?json.encode({
           "entity_id": entityId,
           "is_scrape": isScrape,
           "scrape_by": scrapeBy,
           "scrape_value": scrapeValue
-        }),
+        }):json.encode({
+          "entity_id": entityId,
+          "data": newBlankData,
+        })
       );
 
       final data = jsonDecode(response.body);
@@ -52,7 +55,7 @@ class RecordService {
     try {
       final String? accessToken = await AuthService().getValidAccessToken();
       if (accessToken == null) {
-        showSnackBar(context, 'Access token not found. Please log in again.');
+        showSnackBar(context: context, message: 'Access token not found. Please log in again.');
         return;
       }
 
@@ -66,9 +69,11 @@ class RecordService {
         },
       );
 
+      print(entityId);
+
       // Eğer cevap boşsa, 'No records found' mesajını göster
       if (response.body.isEmpty) {
-        showSnackBar(context, 'No records found.');
+        showSnackBar(context: context, message: 'No records found.');
         return [];
       }
 
@@ -83,14 +88,14 @@ class RecordService {
         } else if (jsonData is Map<String, dynamic>) {
           return [jsonData]; // Obje ise, listeye sararak döndür
         } else {
-          showSnackBar(context, 'Invalid data format received.');
+          showSnackBar(context: context,message:  'Invalid data format received.');
         }
       } else {
-        showSnackBar(context,
-            'Failed to load records. Status code: ${response.statusCode}');
+        showSnackBar(context: context,
+            message: 'Failed to load records. Status code: ${response.statusCode}');
       }
     } catch (e) {
-      showSnackBar(context, 'Something went wrong: $e');
+      showSnackBar(context: context, message: 'Something went wrong: $e');
       print(e);
     }
   }
@@ -101,7 +106,7 @@ class RecordService {
     final String? accessToken = await AuthService().getValidAccessToken();
 
     if (accessToken == null) {
-      showSnackBar(context, 'Access token not found. Please log in again.');
+      showSnackBar(context: context, message: 'Access token not found. Please log in again.');
       return;
     }
 
@@ -124,26 +129,26 @@ class RecordService {
       if (response.statusCode == 200 && data['status'] == 'success') {
         // Başarı mesajını göster
         final successMessage = data['message'] ?? 'Archive successful!';
-        showSnackBar(context, successMessage);
+        showSnackBar(context: context, message: successMessage);
 
         // Callback fonksiyonu çağır
         onSuccess(); // Callback fonksiyonu çağrılır
       } else {
         // Hata mesajını göster
         final errorMessage = data['message'] ?? 'An error occurred.';
-        showSnackBar(context, errorMessage);
+        showSnackBar(context: context, message: errorMessage);
       }
     } catch (e) {
-      showSnackBar(context, 'Something went wrong: $e');
+      showSnackBar(context: context, message: 'Something went wrong: $e');
     }
   }
 
   // Update Records
-  Future<List<Map<String, dynamic>>> updateRecord(BuildContext context, String entityId, String recordId, Map<String, dynamic> updatingData, Map currentData) async {
+  Future<List<Map<String, dynamic>>> updateRecord(BuildContext context, String entityId, String? recordId, Map<String, dynamic> updatingData, Map currentData) async {
     final String? accessToken = await AuthService().getValidAccessToken();
 
     if (accessToken == null) {
-      showSnackBar(context, 'Access token not found. Please log in again.');
+      showSnackBar(context: context, message: 'Access token not found. Please log in again.');
       return [];
     }
 
@@ -157,7 +162,7 @@ class RecordService {
     });
 
     if (changedData.isEmpty) {
-      showSnackBar(context, 'No changes detected.');
+      showSnackBar(context: context, message: 'No changes detected.');
       return [];
     }
 
@@ -180,7 +185,7 @@ class RecordService {
       if (response.statusCode != 200) {
         final errorMessage =
             jsonDecode(response.body)['message'] ?? 'An error occurred.';
-        showSnackBar(context, errorMessage);
+        showSnackBar(context: context, message: errorMessage);
         return [];
       }
 
@@ -192,11 +197,11 @@ class RecordService {
       } else if (data is Map) {
         return [data.cast<String, dynamic>()];
       } else {
-        showSnackBar(context, 'Unexpected response format.');
+        showSnackBar(context: context, message: 'Unexpected response format.');
         return [];
       }
     } catch (e) {
-      showSnackBar(context, 'Something went wrong: $e');
+      showSnackBar(context: context, message: 'Something went wrong: $e');
       return [];
     }
   }

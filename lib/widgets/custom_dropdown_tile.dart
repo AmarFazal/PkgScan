@@ -6,6 +6,8 @@ class CustomDropdownTile extends StatefulWidget {
   final List<String> options;
   final String title;
   final String placeholder;
+  final Function(List<String>)?
+      onChanged; // Zorunlu olmayan onChanged callback'i
 
   const CustomDropdownTile({
     super.key,
@@ -13,6 +15,7 @@ class CustomDropdownTile extends StatefulWidget {
     required this.options,
     this.title = 'Select Options',
     this.placeholder = 'Choose...',
+    this.onChanged, // Zorunlu değil
   });
 
   @override
@@ -51,6 +54,59 @@ class _CustomDropdownTileState extends State<CustomDropdownTile> {
     _dropdownOverlay = null;
   }
 
+  // Manual Image 1'den 10'a kadar olan seçenekleri döndürür
+  List<String> _getManualImageOptions() {
+    return List.generate(10, (index) => 'Manual Image ${index + 1}');
+  }
+
+  // Tüm Manual Image seçenekleri seçili mi kontrol eder
+  bool _areAllManualImagesSelected() {
+    final manualImageOptions = _getManualImageOptions();
+    return manualImageOptions
+        .every((option) => _selectedValues.contains(option));
+  }
+
+  // Manual Images içeren seçenekleri filtreler
+  bool _isManualImageOption(String option) {
+    return _getManualImageOptions().contains(option);
+  }
+
+  // MSRP 1'den 10'a kadar olan seçenekleri döndürür
+  List<String> _getMSRPOptions() {
+    return List.generate(10, (index) => 'MSRP ${index + 1}');
+  }
+
+  // Image 1'den 10'a kadar olan seçenekleri döndürür
+  List<String> _getImageOptions() {
+    return List.generate(10, (index) => 'Image ${index + 1}');
+  }
+
+  // Title 1'den 10'a kadar olan seçenekleri döndürür
+  List<String> _getTitleOptions() {
+    return List.generate(10, (index) => 'Title ${index + 1}');
+  }
+
+  // Online Pulled Listings ile ilişkili tüm seçenekleri döndürür
+  List<String> _getOnlinePulledListingsOptions() {
+    return [
+      ..._getMSRPOptions(),
+      ..._getImageOptions(),
+      ..._getTitleOptions(),
+    ];
+  }
+
+  // Online Pulled Listings ile ilişkili seçenekler seçili mi kontrol eder
+  bool _areAllOnlinePulledListingsSelected() {
+    final onlinePulledListingsOptions = _getOnlinePulledListingsOptions();
+    return onlinePulledListingsOptions
+        .every((option) => _selectedValues.contains(option));
+  }
+
+  // Online Pulled Listings ile ilişkili seçenekleri filtreler
+  bool _isOnlinePulledListingsOption(String option) {
+    return _getOnlinePulledListingsOptions().contains(option);
+  }
+
   OverlayEntry _createDropdown() {
     RenderBox renderBox = context.findRenderObject() as RenderBox;
     Size size = renderBox.size;
@@ -64,7 +120,8 @@ class _CustomDropdownTileState extends State<CustomDropdownTile> {
               behavior: HitTestBehavior.translucent,
               onTap: _hideDropdown, // Dropdown dışına tıklanınca kapanır
               child: Container(
-                color: Colors.transparent, // Tıklamayı algılamak için bir arka plan
+                color: Colors
+                    .transparent, // Tıklamayı algılamak için bir arka plan
               ),
             ),
             Positioned(
@@ -82,7 +139,7 @@ class _CustomDropdownTileState extends State<CustomDropdownTile> {
                         color: Colors.black.withOpacity(0.2),
                         blurRadius: 5,
                         offset: const Offset(0, 3),
-                      ),
+                      )
                     ],
                   ),
                   constraints: const BoxConstraints(maxHeight: 300),
@@ -90,6 +147,11 @@ class _CustomDropdownTileState extends State<CustomDropdownTile> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: widget.options.map((option) {
+                        // Manual Images ve Online Pulled Listings ile ilişkili seçenekleri filtrele
+                        if (_isManualImageOption(option) ||
+                            _isOnlinePulledListingsOption(option)) {
+                          return const SizedBox.shrink(); // Gizle
+                        }
                         return StatefulBuilder(
                           builder: (context, setState) {
                             return Row(
@@ -98,23 +160,60 @@ class _CustomDropdownTileState extends State<CustomDropdownTile> {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(60),
                                   ),
-                                  value: _selectedValues.contains(option),
+                                  value: option == 'Manual Images'
+                                      ? _areAllManualImagesSelected() // Manual Images seçeneğinin durumu
+                                      : option == 'Online Pulled Listings'
+                                          ? _areAllOnlinePulledListingsSelected() // Online Pulled Listings seçeneğinin durumu
+                                          : _selectedValues.contains(option),
                                   onChanged: (bool? isChecked) {
                                     setState(() {});
                                     this.setState(() {
-                                      if (isChecked == true) {
-                                        _selectedValues.add(option);
+                                      if (option == 'Manual Images') {
+                                        // Manual Images seçildiğinde
+                                        if (isChecked == true) {
+                                          // Tüm Manual Image seçeneklerini ekle
+                                          _selectedValues
+                                              .addAll(_getManualImageOptions());
+                                        } else {
+                                          // Tüm Manual Image seçeneklerini kaldır
+                                          _selectedValues.removeWhere((item) =>
+                                              _getManualImageOptions()
+                                                  .contains(item));
+                                        }
+                                      } else if (option ==
+                                          'Online Pulled Listings') {
+                                        // Online Pulled Listings seçildiğinde
+                                        if (isChecked == true) {
+                                          // Tüm MSRP, Image ve Title seçeneklerini ekle
+                                          _selectedValues.addAll(
+                                              _getOnlinePulledListingsOptions());
+                                        } else {
+                                          // Tüm MSRP, Image ve Title seçeneklerini kaldır
+                                          _selectedValues.removeWhere((item) =>
+                                              _getOnlinePulledListingsOptions()
+                                                  .contains(item));
+                                        }
                                       } else {
-                                        _selectedValues.remove(option);
+                                        // Diğer seçenekler için normal işlem
+                                        if (isChecked == true) {
+                                          _selectedValues.add(option);
+                                        } else {
+                                          _selectedValues.remove(option);
+                                        }
                                       }
                                       widget.controller.text =
                                           _selectedValues.join(", ");
+                                      // onChanged callback'i çağır
+                                      if (widget.onChanged != null) {
+                                        widget.onChanged!(_selectedValues);
+                                      }
                                     });
                                   },
                                 ),
                                 Text(
                                   option,
-                                  style: Theme.of(context).textTheme.displayMedium,
+                                  style:
+                                      Theme.of(context).textTheme.displayMedium,
                                 ),
                               ],
                             );
@@ -168,8 +267,10 @@ class _CustomDropdownTileState extends State<CustomDropdownTile> {
                             : _selectedValues.join(", "),
                         softWrap: true,
                         overflow: TextOverflow.ellipsis,
-                        style:
-                        Theme.of(context).textTheme.displayMedium?.copyWith(),
+                        style: Theme.of(context)
+                            .textTheme
+                            .displayMedium
+                            ?.copyWith(),
                       ),
                     ],
                   ),

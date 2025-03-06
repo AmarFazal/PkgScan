@@ -8,11 +8,13 @@ import '../services/cloud_service.dart';
 class CameraScreen extends StatefulWidget {
   final String entityId;
   final VoidCallback onRecordAdded; // Callback ekleyin
+  final VoidCallback onAnyAction; // Callback ekleyin
 
   const CameraScreen({
     Key? key,
     required this.entityId,
     required this.onRecordAdded, // Callback parametresi
+    required this.onAnyAction, // Callback parametresi
   }) : super(key: key);
 
   @override
@@ -46,6 +48,7 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _captureAndUploadPhoto() async {
+    widget.onAnyAction();
     if (_isProcessing || _cameraController == null) return;
 
     setState(() {
@@ -71,11 +74,12 @@ class _CameraScreenState extends State<CameraScreen> {
           widget.entityId,
           true,
           "image-search",
-          imageUrl,
+          imageUrl, false, {}
+
         );
 
         if (data != null && mounted) {
-          showSnackBar(currentContext, data);
+          showSnackBar(context: currentContext, message: data);
         }
 
         // Callback'i çağır (addRecord tamamlandığında)
@@ -85,7 +89,7 @@ class _CameraScreenState extends State<CameraScreen> {
       }
     } catch (e) {
       if (mounted) {
-        showSnackBar(currentContext, "An error occurred: $e");
+        showSnackBar(context: currentContext, message: "An error occurred: $e");
       }
     } finally {
       setState(() {

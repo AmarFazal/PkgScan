@@ -1,7 +1,6 @@
-import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_pkgscan/widgets/auth_button.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // shared_preferences import edildi
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_pkgscan/services/entities_service.dart';
 import 'package:flutter_pkgscan/widgets/custom_dropdown_tile_single.dart';
 
@@ -16,13 +15,15 @@ class LibrariesSettingsSheet extends StatefulWidget {
   final Map<String, dynamic> data;
   final String entityId;
   final bool isManifest;
+  final VoidCallback? onSave; // Dışarıdan ek işlem almak için
 
   const LibrariesSettingsSheet({
     super.key,
     required this.searchController,
     required this.data,
     required this.entityId,
-    required this.isManifest ,
+    required this.isManifest,
+    this.onSave,
   });
 
   @override
@@ -37,10 +38,11 @@ class _LibrariesSettingsSheetState extends State<LibrariesSettingsSheet> {
   Map<String, dynamic>? entity;
   late bool isLoading = false;
 
+  final List<String> _fieldsInQuickEditOptions = [
+    'Manual Images',
+    'Online Pulled Listings',
+  ];
 
-
-  final List<String> _fieldsInQuickEditOptions =
-      List.from(TextConstants.fieldsInQuickEditOptions);
   final List<String> _consignorOptions = TextConstants.consignorOptions;
   final List<String> _shelfOptions = TextConstants.shelfOptions;
   final List<String> _currencyOptions = TextConstants.currencyOptions;
@@ -95,11 +97,16 @@ class _LibrariesSettingsSheetState extends State<LibrariesSettingsSheet> {
     });
 
     try {
-      entity = await EntitiesService().retrieveEntities(context, widget.entityId);
+      entity =
+          await EntitiesService().retrieveEntities(context, widget.entityId);
       if (entity != null) {
         retrievedData = entity!['manifest_settings'];
         print("Retrieved Data: ${retrievedData}");
-        _loadDataFromApi();
+        if (retrievedData != null && retrievedData!.isNotEmpty) {
+          _loadDataFromApi();
+        } else {
+          _loadDataFromPreferences();
+        }
       } else {
         debugPrint('Failed to retrieve entity.');
       }
@@ -112,14 +119,14 @@ class _LibrariesSettingsSheetState extends State<LibrariesSettingsSheet> {
     }
   }
 
-
-
-  Future<void> _loadDataFromApi() async{
+  Future<void> _loadDataFromApi() async {
     setState(() {
-      _startBidController.text =  retrievedData!['Start Bid'] ?? '';
-      _descriptionLengthController.text =retrievedData!['Description Length']?? '';
+      _startBidController.text = retrievedData!['Start Bid'] ?? '';
+      _descriptionLengthController.text =
+          retrievedData!['Description Length'] ?? '';
       _bulletPointsController.text = retrievedData!['Bullet Point'] ?? '';
-      _pulledImageCountController.text = retrievedData!['Pulled Images Count'] ?? '';
+      _pulledImageCountController.text =
+          retrievedData!['Pulled Images Count'] ?? '';
       isDontFilterDescription = retrievedData!['Filter Description'] ?? false;
       isDescriptionHavePrefixSuffix =
           retrievedData!['Description Have Prefix/Suffix'] ?? false;
@@ -138,10 +145,10 @@ class _LibrariesSettingsSheetState extends State<LibrariesSettingsSheet> {
           retrievedData!['Status'] ?? _valuesShowingInTableTileOptions[0];
       isActiveQuickEditChecked = retrievedData!['Active Quick Edit'] ?? false;
       List<dynamic>? fieldsInQuickEdit = retrievedData!['Fields in Quick Edit'];
-      _checkedFieldsInQuickEditController.text = fieldsInQuickEdit?.join(', ') ?? '';
+      _checkedFieldsInQuickEditController.text =
+          fieldsInQuickEdit?.join(', ') ?? '';
     });
   }
-
 
   Future<void> _loadDataFromPreferences() async {
     final prefs = await SharedPreferences.getInstance();
@@ -197,7 +204,9 @@ class _LibrariesSettingsSheetState extends State<LibrariesSettingsSheet> {
     prefs.setString('subtitle', _subtitleOptionsController.text);
     prefs.setString('status', _statusOptionsController.text);
     prefs.setBool('activeQuickEdit', isActiveQuickEditChecked);
-    prefs.setStringList('fieldsInQuickEdit', _checkedFieldsInQuickEditController.text
+    prefs.setStringList(
+        'fieldsInQuickEdit',
+        _checkedFieldsInQuickEditController.text
             .split(',')
             .map((item) => item.trim())
             .toList());
@@ -215,163 +224,176 @@ class _LibrariesSettingsSheetState extends State<LibrariesSettingsSheet> {
           bottom:
               MediaQuery.of(context).viewInsets.bottom, // Klavyeye göre padding
         ),
-        child:isLoading? Center(child: CircularProgressIndicator( color: AppColors.primaryColor,),) : Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                controller: scrollController,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CustomFieldWithoutIcon(
-                      label: TextConstants.startBid,
-                      controller: _startBidController,
-                    ),
-                    CustomFieldWithoutIcon(
-                        label: TextConstants.descriptionLength,
-                        controller: _descriptionLengthController),
-                    CustomFieldWithoutIcon(
-                        label: TextConstants.bulletPoints,
-                        controller: _bulletPointsController),
-                    CustomFieldWithoutIcon(
-                        label: TextConstants.pulledImagesCount,
-                        controller: _pulledImageCountController),
-                    EntriesCheckbox(
-                      isChecked: isDontFilterDescription,
-                      label: TextConstants.dontFilterDescription,
-                      onChanged: (value) {
-                        setState(() {
-                          isDontFilterDescription = !isDontFilterDescription;
-                        });
-                      },
-                    ),
-                    EntriesCheckbox(
-                      isChecked: isDescriptionHavePrefixSuffix,
-                      label: TextConstants.descriptionHavePrefixSuffix,
-                      onChanged: (value) {
-                        setState(() {
-                          isDescriptionHavePrefixSuffix =
-                              !isDescriptionHavePrefixSuffix;
-                        });
-                      },
-                    ),
-                    EntriesCheckbox(
-                      isChecked: isHaveDescription,
-                      label: TextConstants.haveDescription,
-                      onChanged: (value) {
-                        setState(() {
-                          isHaveDescription = !isHaveDescription;
-                        });
-                      },
-                    ),
+        child: isLoading
+            ? Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.primaryColor,
+                ),
+              )
+            : Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CustomFieldWithoutIcon(
+                            label: TextConstants.startBid,
+                            controller: _startBidController,
+                          ),
+                          CustomFieldWithoutIcon(
+                              label: TextConstants.descriptionLength,
+                              controller: _descriptionLengthController),
+                          CustomFieldWithoutIcon(
+                              label: TextConstants.bulletPoints,
+                              controller: _bulletPointsController),
+                          CustomFieldWithoutIcon(
+                              label: TextConstants.pulledImagesCount,
+                              controller: _pulledImageCountController),
+                          EntriesCheckbox(
+                            isChecked: isDontFilterDescription,
+                            label: TextConstants.dontFilterDescription,
+                            onChanged: (value) {
+                              setState(() {
+                                isDontFilterDescription =
+                                    !isDontFilterDescription;
+                              });
+                            },
+                          ),
+                          EntriesCheckbox(
+                            isChecked: isDescriptionHavePrefixSuffix,
+                            label: TextConstants.descriptionHavePrefixSuffix,
+                            onChanged: (value) {
+                              setState(() {
+                                isDescriptionHavePrefixSuffix =
+                                    !isDescriptionHavePrefixSuffix;
+                              });
+                            },
+                          ),
+                          EntriesCheckbox(
+                            isChecked: isHaveDescription,
+                            label: TextConstants.haveDescription,
+                            onChanged: (value) {
+                              setState(() {
+                                isHaveDescription = !isHaveDescription;
+                              });
+                            },
+                          ),
+                          if (!widget.isManifest) ...[
+                            CustomDropdownTileSingle(
+                              title: _shelfOptionsController.text,
+                              controller: _shelfOptionsController,
+                              options: _shelfOptions,
+                              label: TextConstants.shelf,
+                            ),
+                            CustomDropdownTileSingle(
+                              title: _currencyOptionsController.text,
+                              controller: _currencyOptionsController,
+                              options: _currencyOptions,
+                              label: TextConstants.currency,
+                            ),
 
-                    CustomDropdownTileSingle(
-                      title: _consignorOptionsController.text,
-                      controller: _consignorOptionsController,
-                      options: _consignorOptions,
-                      label: TextConstants.consignor,
-                    ),
-                    CustomDropdownTileSingle(
-                      title: _shelfOptionsController.text,
-                      controller: _shelfOptionsController,
-                      options: _shelfOptions,
-                      label: TextConstants.shelf,
-                    ),
-                    CustomDropdownTileSingle(
-                      title: _currencyOptionsController.text,
-                      controller: _currencyOptionsController,
-                      options: _currencyOptions,
-                      label: TextConstants.currency,
-                    ),
-                    CustomDropdownTileSingle(
-                      title: _titleOptionsController.text,
-                      controller: _titleOptionsController,
-                      options: _valuesShowingInTableTileOptions,
-                      label: TextConstants.title,
-                    ),
-                    CustomDropdownTileSingle(
-                      title: _subtitleOptionsController.text,
-                      controller: _subtitleOptionsController,
-                      options: _valuesShowingInTableTileOptions,
-                      label: TextConstants.subtitle,
-                    ),
-                    CustomDropdownTileSingle(
-                      title: _statusOptionsController.text,
-                      controller: _statusOptionsController,
-                      options: _valuesShowingInTableTileOptions,
-                      label: TextConstants.status,
-                    ),
+                          // CustomDropdownTileSingle(
+                          //   title: _titleOptionsController.text,
+                          //   controller: _titleOptionsController,
+                          //   options: _valuesShowingInTableTileOptions,
+                          //   label: TextConstants.title,
+                          // ),
+                          // CustomDropdownTileSingle(
+                          //   title: _subtitleOptionsController.text,
+                          //   controller: _subtitleOptionsController,
+                          //   options: _valuesShowingInTableTileOptions,
+                          //   label: TextConstants.subtitle,
+                          // ),
+                          EntriesCheckbox(
+                            isChecked: isActiveQuickEditChecked,
+                            label: TextConstants.activeQuickEdit,
+                            onChanged: (value) {
+                              setState(() {
+                                isActiveQuickEditChecked = value;
+                              });
 
-                    EntriesCheckbox(
-                      isChecked: isActiveQuickEditChecked,
-                      label: TextConstants.activeQuickEdit,
-                      onChanged: (value) {
-                        setState(() {
-                          isActiveQuickEditChecked = value;
-                        });
+                              // Yeni bir field eklendiğinde yukarı kaydır
+                              if (value) {
+                                Future.delayed(
+                                    const Duration(milliseconds: 300), () {
+                                  scrollController.animateTo(
+                                    scrollController.position.maxScrollExtent,
+                                    duration: const Duration(milliseconds: 500),
+                                    curve: Curves.easeOut,
+                                  );
+                                });
+                              }
+                            },
+                          ),
+                          // Quick Edit aktif olduğunda yeni field göster
+                          if (isActiveQuickEditChecked)
+                            CustomDropdownTile(
+                              controller: _checkedFieldsInQuickEditController,
+                              options: _fieldsInQuickEditOptions,
+                              title: TextConstants.fieldsinQuickEdit,
+                              placeholder:
+                                  _checkedFieldsInQuickEditController.text,
+                              onChanged: (value) {
+                                if (value == 'Manual Images') {
+                                  // Manual Images seçildiğinde tüm Manual Image seçeneklerini aktif et
+                                  setState(() {
+                                    _checkedFieldsInQuickEditController.text =
+                                        'Manual Image 1, Manual Image 2, Manual Image 3, Manual Image 4, Manual Image 5, Manual Image 6, Manual Image 7, Manual Image 8, Manual Image 9, Manual Image 10';
+                                  });
+                                }
+                              },
+                            ),
 
-                        // Yeni bir field eklendiğinde yukarı kaydır
-                        if (value) {
-                          Future.delayed(const Duration(milliseconds: 300), () {
-                            scrollController.animateTo(
-                              scrollController.position.maxScrollExtent,
-                              duration: const Duration(milliseconds: 500),
-                              curve: Curves.easeOut,
-                            );
-                          });
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: AuthButton(
+                      onTap: () async {
+                        Map<String, dynamic> body = {
+                          "Start Bid": _startBidController.text,
+                          "Description Length":
+                              _descriptionLengthController.text,
+                          "Bullet Point": _bulletPointsController.text,
+                          "Pulled Images Count":
+                              _pulledImageCountController.text,
+                          "Filter Description": isDontFilterDescription,
+                          "Description Have Prefix/Suffix":
+                              isDescriptionHavePrefixSuffix,
+                          "Have a Description": isHaveDescription,
+                          "Consignor": _consignorOptionsController.text,
+                          "Shelf": _shelfOptionsController.text,
+                          "Currency": _currencyOptionsController.text,
+                          "Title": _titleOptionsController.text,
+                          "Status": _statusOptionsController.text,
+                          "Active Quick Edit": isActiveQuickEditChecked,
+                          "Fields in Quick Edit":
+                              _checkedFieldsInQuickEditController.text
+                                  .split(',')
+                                  .map((item) => item.trim())
+                                  .toSet()
+                                  .toList(),
+                        };
+                        // Verileri kaydetme
+                        widget.isManifest
+                            ? await saveDataToPreferences()
+                            : await EntitiesService()
+                                .updateEntities(context, widget.entityId, body);
+                        Navigator.pop(context);
+                        if (widget.onSave != null) {
+                          widget.onSave!(); // Sonra ek işlemi tetikle
                         }
                       },
+                      title: 'Save',
                     ),
-                    // Quick Edit aktif olduğunda yeni field göster
-                    if (isActiveQuickEditChecked)
-                      CustomDropdownTile(
-                        controller: _checkedFieldsInQuickEditController,
-                        options: _fieldsInQuickEditOptions,
-                        title: TextConstants.fieldsinQuickEdit,
-                        placeholder: _checkedFieldsInQuickEditController.text,
-                      ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: AuthButton(
-                onTap: () async {
-                  Map<String, dynamic> body = {
-                    "Start Bid": _startBidController.text,
-                    "Description Length": _descriptionLengthController.text,
-                    "Bullet Point": _bulletPointsController.text,
-                    "Pulled Images Count": _pulledImageCountController.text,
-                    "Filter Description": isDontFilterDescription,
-                    "Description Have Prefix/Suffix":
-                        isDescriptionHavePrefixSuffix,
-                    "Have a Description": isHaveDescription,
-                    "Consignor": _consignorOptionsController.text,
-                    "Shelf": _shelfOptionsController.text,
-                    "Currency": _currencyOptionsController.text,
-                    "Title": _titleOptionsController.text,
-                    "Status": _statusOptionsController.text,
-                    "Active Quick Edit": isActiveQuickEditChecked,
-                    "Fields in Quick Edit": _checkedFieldsInQuickEditController
-                        .text
-                        .split(',')
-                        .map((item) => item.trim())
-                        .toSet()
-                        .toList(),
-                  };
-                  // Verileri kaydetme
-                  widget.isManifest
-                      ? await saveDataToPreferences()
-                      : await EntitiesService()
-                          .updateEntities(context, widget.entityId, body);
-                  Navigator.pop(context);
-                },
-                title: 'Save',
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

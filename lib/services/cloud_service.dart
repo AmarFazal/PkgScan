@@ -37,11 +37,11 @@ class CloudService {
       if (jsonResponse['url'] != null) {
         return jsonResponse['url']; // Fotoğraf URL'sini döndür
       } else {
-        showSnackBar(context, jsonResponse['message']);
+        showSnackBar(context: context, message: jsonResponse['message']);
         throw Exception("Photo upload failed!");
       }
     } catch (e) {
-      showSnackBar(context, "An error occurred during photo upload: $e");
+      showSnackBar(context: context, message: "An error occurred during photo upload: $e");
     }
     return null;
   }

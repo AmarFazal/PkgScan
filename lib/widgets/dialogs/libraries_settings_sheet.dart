@@ -8,6 +8,7 @@ void showLibrariesSettingsSheet(
   Map<String, dynamic> data,
   String entityId,
   bool isManifest,
+  VoidCallback? onSave, // Dışarıdan ek işlem almak için
 ) {
   showModalBottomSheet(
     isScrollControlled: true,
@@ -20,7 +21,9 @@ void showLibrariesSettingsSheet(
       return LibrariesSettingsSheet(
         searchController: searchController,
         data: data,
-        entityId: entityId, isManifest: isManifest,
+        entityId: entityId,
+        isManifest: isManifest,
+        onSave: onSave,
       );
     },
   );

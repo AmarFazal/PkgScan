@@ -7,10 +7,14 @@ Future<void> showAddManifestDialog({
   required BuildContext context,
   required Function(String, IconData?) onAdd,
   required List<Map<String, dynamic>> iconList,
+  required bool isGuestMode,
 }) async {
   TextEditingController manifestNameController = TextEditingController();
   TextEditingController manifestDescriptionController = TextEditingController();
   IconData? _selectedIcon;
+
+
+
 
   await showModalBottomSheet(
     isScrollControlled: true,
@@ -124,7 +128,8 @@ Future<void> showAddManifestDialog({
                   ),
                   TextButton(
                     onPressed: () async {
-                      if (manifestNameController.text.isNotEmpty) {
+                      if(isGuestMode == false){
+                        if (manifestNameController.text.isNotEmpty) {
                         try {
                           // ManifestService'i çağırarak manifesti ekle
                           await ManifestService().addManifest(
@@ -145,7 +150,14 @@ Future<void> showAddManifestDialog({
                             ),
                           );
                         }
+                      }}
+                      else{
+                        if(manifestNameController.text.isNotEmpty){
+                          ManifestService().addManifestToLocalStorage(context, manifestNameController.text, manifestDescriptionController.text);
+                          Navigator.pop(context);
+                        }
                       }
+
                     },
                     child: Text(TextConstants.add,
                         style: Theme.of(context)

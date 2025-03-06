@@ -3,7 +3,12 @@ import 'package:flutter_pkgscan/widgets/header_icon.dart';
 import '../constants/app_colors.dart';
 
 Widget CustomField(
-    IconData icon, String hint, TextEditingController controller) {
+  IconData icon,
+  String hint,
+  TextEditingController controller, {
+  TextInputAction? textInputAction = TextInputAction.next,
+  TextInputType? keyboardType = TextInputType.text,
+}) {
   return TextField(
     controller: controller,
     decoration: InputDecoration(
@@ -18,6 +23,8 @@ Widget CustomField(
       hintStyle: const TextStyle(color: AppColors.primaryColor),
       prefixIcon: Icon(icon, color: AppColors.primaryColor),
     ),
+    keyboardType: keyboardType,
+    textInputAction: textInputAction,
   );
 }
 
@@ -50,12 +57,13 @@ Widget CustomFieldWithoutIcon({
             ),
           ),
         ),
-        onTapExport != null?
-        HeaderIcon(
-          color: Colors.white54,
-          onTap: onTapExport,
-          icon: Icons.upload,
-        ):const SizedBox.shrink(),
+        onTapExport != null
+            ? HeaderIcon(
+                color: Colors.white54,
+                onTap: onTapExport,
+                icon: Icons.upload,
+              )
+            : const SizedBox.shrink(),
       ],
     ),
   );

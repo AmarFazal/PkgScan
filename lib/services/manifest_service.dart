@@ -2,9 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_pkgscan/constants/config.dart';
 import 'package:flutter_pkgscan/services/auth_service.dart';
+import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
 import 'dart:convert';
 
+import '../models/guest_mode/manifest.dart';
 import '../widgets/snack_bar.dart';
 
 class ManifestService {
@@ -13,7 +16,7 @@ class ManifestService {
     final String? accessToken = await AuthService().getValidAccessToken();
 
     if (accessToken == null) {
-      showSnackBar(context, 'Access token not found. Please log in again.');
+      showSnackBar(context: context, message: 'Access token not found. Please log in again.');
       return;
     }
 
@@ -36,13 +39,13 @@ class ManifestService {
       if (response.statusCode == 200) {
         // Başarılı mesajı göster
         showSnackBar(
-            context, data['message'] ?? 'Manifest added successfully!');
+            context: context, message: data['message'] ?? 'Manifest added successfully!');
       } else {
         // Hata mesajını göster
-        showSnackBar(context, data['message'] ?? 'An error occurred.');
+        showSnackBar(context: context, message: data['message'] ?? 'An error occurred.');
       }
     } catch (e) {
-      showSnackBar(context, 'Something went wrong: $e');
+      showSnackBar(context: context, message: 'Something went wrong: $e');
     }
   }
 
@@ -51,7 +54,7 @@ class ManifestService {
     try {
       final String? accessToken = await AuthService().getValidAccessToken();
       if (accessToken == null) {
-        showSnackBar(context, 'Access token not found. Please log in again.');
+        showSnackBar(context: context, message: 'Access token not found. Please log in again.');
         return;
       }
 
@@ -67,10 +70,10 @@ class ManifestService {
         final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
         return data.cast<Map<String, dynamic>>();  // Veriyi döndür
       } else {
-        showSnackBar(context, 'Failed to fetch manifests.');
+        showSnackBar(context: context, message: 'Failed to fetch manifests.');
       }
     } catch (e) {
-      showSnackBar(context, 'Something went wrong: $e');
+      showSnackBar(context: context, message: 'Something went wrong: $e');
     }
   }
 
@@ -79,7 +82,7 @@ class ManifestService {
     final String? accessToken = await AuthService().getValidAccessToken();
 
     if (accessToken == null) {
-      showSnackBar(context, 'Access token not found. Please log in again.');
+      showSnackBar(context: context, message: 'Access token not found. Please log in again.');
       return [];
     }
 
@@ -103,7 +106,7 @@ class ManifestService {
       if (response.statusCode == 200) {
         // Başarı mesajını göster
         final successMessage = data['message'] ?? 'Edit successful!';
-        showSnackBar(context, successMessage);
+        showSnackBar(context: context, message: successMessage);
 
         // Eğer data bir listeyse, listeye dönüştür
         if (data is List) {
@@ -113,17 +116,17 @@ class ManifestService {
             data.cast<String, dynamic>()
           ]; // Map<String, dynamic> olarak dönüştür
         } else {
-          showSnackBar(context, 'Unexpected response format.');
+          showSnackBar(context: context, message: 'Unexpected response format.');
           return [];
         }
       } else {
         // Hata mesajını göster
         final errorMessage = data['message'] ?? 'An error occurred.';
-        showSnackBar(context, errorMessage);
+        showSnackBar(context: context, message: errorMessage);
         return [];
       }
     } catch (e) {
-      showSnackBar(context, 'Something went wrong: $e');
+      showSnackBar(context: context, message: 'Something went wrong: $e');
       return [];
     }
   }
@@ -133,7 +136,7 @@ class ManifestService {
     final String? accessToken = await AuthService().getValidAccessToken();
 
     if (accessToken == null) {
-      showSnackBar(context, 'Access token not found. Please log in again.');
+      showSnackBar(context: context, message: 'Access token not found. Please log in again.');
       return;
     }
 
@@ -155,19 +158,57 @@ class ManifestService {
       if (response.statusCode == 200 && data['status'] == 'success') {
         // Başarı mesajını göster
         final successMessage = data['message'] ?? 'Archive successful!';
-        showSnackBar(context, successMessage);
+        showSnackBar(context: context, message: successMessage);
 
         // Callback fonksiyonu çağır
         onSuccess();  // Callback fonksiyonu çağrılır
       } else {
         // Hata mesajını göster
         final errorMessage = data['message'] ?? 'An error occurred.';
-        showSnackBar(context, errorMessage);
+        showSnackBar(context: context, message: errorMessage);
       }
     } catch (e) {
-      showSnackBar(context, 'Something went wrong: $e');
+      showSnackBar(context: context, message: 'Something went wrong: $e');
     }
   }
+
+
+
+  void addManifestToLocalStorage(BuildContext context, String name, String description) {
+    try {
+      final Box<Manifest> manifestBox = Hive.box<Manifest>('manifests');
+      const Uuid uuid = Uuid();
+      final String id = uuid.v4().substring(0, 24); // Rastgele _id
+
+      if (name.isNotEmpty && description.isNotEmpty) {
+        final String entityId = uuid.v4().substring(0, 24); // Rastgele entity ID
+        final Manifest newManifest = Manifest(
+          id: id,
+          name: name,
+          description: description,
+          entities: [entityId],
+        );
+
+        manifestBox.add(newManifest);
+
+        // Başarı mesajı
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Manifest başarıyla kaydedildi!')),
+        );
+      } else {
+        // Kullanıcıya eksik bilgi uyarısı
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lütfen tüm alanları doldurun!')),
+        );
+      }
+    } catch (e) {
+      // Hata mesajı
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Bir hata oluştu: $e')),
+      );
+    }
+  }
+
 
 
 

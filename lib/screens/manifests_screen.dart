@@ -1,14 +1,10 @@
-import 'dart:developer';
-import 'dart:io';
-import 'package:flutter_pkgscan/services/entities_service.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:flutter_pkgscan/services/manifest_service.dart';
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_pkgscan/widgets/snack_bar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_colors.dart';
 import '../constants/icon_list.dart';
 import '../constants/text_constants.dart';
-import '../services/record_service.dart';
 import '../utils/scroll_listener_helper.dart';
 import '../utils/scroll_utils.dart';
 import '../widgets/custom_search_bar.dart';
@@ -19,7 +15,6 @@ import '../widgets/header_icon.dart';
 import '../widgets/manifests_tile.dart';
 import '../widgets/screen_loading.dart';
 import 'library_screen.dart';
-import 'package:syncfusion_flutter_xlsio/xlsio.dart' as xls;
 
 class ManifestsScreen extends StatefulWidget {
   const ManifestsScreen({super.key});
@@ -31,7 +26,6 @@ class ManifestsScreen extends StatefulWidget {
 class _ManifestsScreenState extends State<ManifestsScreen> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
-
   late ScrollListenerHelper _scrollHelper;
   bool _isVisible = true;
   List<Map<String, dynamic>> manifests = []; // Manifest listesi
@@ -42,13 +36,13 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
   Map<int, IconData?> selectedIcons = {};
   List<Map<String, dynamic>> allRecords = []; // Manifest listesi
   Map<String, dynamic>? entity;
-  final EntitiesService _entitiesService = EntitiesService();
-
   late Map<String, bool> checkboxStates;
+  late bool isGuestMode = false;
 
   @override
   void initState() {
     super.initState();
+    checkIsGuestMode();
     _scrollHelper = ScrollListenerHelper(
       scrollController: _scrollController,
       onVisibilityChange: (isVisible) {
@@ -63,6 +57,12 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       focusNode.unfocus();
     });
+  }
+
+  checkIsGuestMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    isGuestMode =  prefs.getBool('isGuestMode') ?? false; // Eğer değer yoksa varsayılan olarak false döner
+  print(isGuestMode);
   }
 
   // Manifest verilerini çekip listeyi güncelleme fonksiyonu
@@ -138,6 +138,7 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
               });
               fetchManifestsAndUpdate();
             },
+            isGuestMode: isGuestMode
           );
         },
       ),
@@ -145,7 +146,9 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
       HeaderIcon(
           icon: Icons.settings_outlined,
           onTap: () => showLibrariesSettingsSheet(
-              context, TextEditingController(), {}, '', true)),
+              context, TextEditingController(), {}, '', true, () {
+
+              },)),
     ];
   }
 
@@ -170,15 +173,30 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
     final trimmedQuery = query.trim().toLowerCase();
     setState(() {
       if (trimmedQuery.isEmpty) {
-        searchedManifests = manifests;
+        searchedManifests = List.from(manifests); // Tüm manifestleri geri getir
+        _lastQueryHadResults = true; // Kullanıcı sıfırdan başlıyor, tekrar Snackbar gösterebiliriz.
       } else {
         searchedManifests = manifests.where((manifest) {
           final name = manifest["name"]?.toString().toLowerCase() ?? '';
           return name.contains(trimmedQuery);
         }).toList();
+
+        // Eğer sonuç yoksa ve önceki sorgu da sonuçsuz değilse Snackbar göster
+        if (searchedManifests.isEmpty && _lastQueryHadResults) {
+          _lastQueryHadResults = false; // Artık sonuç yok
+          ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Önceki Snackbar'ı kapat
+          showSnackBar(context: context, message: 'No manifest found.', duration: 4);
+        } else if (searchedManifests.isNotEmpty) {
+          _lastQueryHadResults = true; // Sonuç bulundu, tekrar arama yapılırsa Snackbar gösterebiliriz.
+        }
       }
     });
   }
+
+// Sonuç bulunup bulunmadığını takip eden değişken
+  bool _lastQueryHadResults = true;
+
+
 
   Widget _buildSearchBar() {
     return AnimatedContainer(
@@ -190,7 +208,7 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
         child: CustomSearchBar(
           controller: _searchController,
           focusNode: focusNode,
-          onTap: () => _filterManifests(_searchController.text),
+          //onTapSearch: () => _filterManifests(_searchController.text),
           onChange: (value) => _filterManifests(_searchController.text),
           onClear: () {
             _filterManifests('');
@@ -200,38 +218,6 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
           },
         ),
       ),
-    );
-  }
-
-  Widget _buildUserData() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            const Icon(
-              Icons.person_2_outlined,
-              color: AppColors.white,
-              size: 20,
-            ),
-            const SizedBox(width: 5),
-            Text(
-              TextConstants.userNameUpperCase,
-              style: Theme.of(context)
-                  .textTheme
-                  .displaySmall
-                  ?.copyWith(color: AppColors.white),
-            ),
-          ],
-        ),
-        Text(
-          TextConstants.useableStorage,
-          style: Theme.of(context)
-              .textTheme
-              .displaySmall
-              ?.copyWith(color: AppColors.white),
-        ),
-      ],
     );
   }
 
@@ -277,6 +263,7 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
                         });
                         fetchManifestsAndUpdate(); // Manifest verilerini getir
                       },
+                        isGuestMode: isGuestMode
                     );
                   },
                   child: Container(
@@ -304,65 +291,84 @@ class _ManifestsScreenState extends State<ManifestsScreen> {
           color: AppColors.backgroundColor,
           borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
         ),
-        child: ListView.builder(
+        child:ListView.builder(
           controller: _scrollController,
-          itemCount: searchedManifests.isNotEmpty
+          itemCount: searchedManifests.isNotEmpty || _searchController.text.isNotEmpty
               ? searchedManifests.length
               : manifests.length,
-          // Eğer arama varsa searchedManifests, yoksa manifests
           itemBuilder: (context, index) {
-            final manifest = searchedManifests.isNotEmpty
+            final manifest = searchedManifests.isNotEmpty || _searchController.text.isNotEmpty
                 ? searchedManifests[index]
-                : manifests[index]; // Arama sonuçları ya da tüm liste
-            return ManifestsTile(
-              title: manifest['name'] ?? 'Unnamed',
-              // İsim gösterimi
-              subtitle: manifest['description'] ?? 'No description',
-              icon: Icons.task,
-              // Varsayılan ikon
-              iconSize: 35,
-              holdDownWorking: true,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => LibraryScreen(
-                      pageTitle: manifest['name'] ?? 'Unnamed',
-                      manifestId: manifest['_id'],
-                      entitiesId: (manifest['entities'] as List).isNotEmpty
-                          ? manifest['entities'][0]
-                          : null, // Eğer liste boşsa null döner
-                    ),
+                : manifests[index];
+
+            return TweenAnimationBuilder(
+              tween: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero),
+              duration: Duration(milliseconds: 300 + (index * 100)), // Her öğeye gecikme
+              curve: Curves.easeOut,
+              builder: (context, Offset offset, child) {
+                return Transform.translate(
+                  offset: offset * MediaQuery.of(context).size.width, // Sağdan sola kaydırma
+                  child: TweenAnimationBuilder(
+                    tween: Tween<double>(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 500), // Opacity için ayrı animasyon
+                    builder: (context, double opacity, child) {
+                      return Opacity(
+                        opacity: opacity,
+                        child: child,
+                      );
+                    },
+                    child: child,
                   ),
                 );
-                focusNode.unfocus();
               },
-              onLongPress: () {
-                showManifestSettingsDialog(
-                  context: context,
-                  manifestId: manifest['_id'],
-                  initialName: manifest['name'] ?? 'Unnamed',
-                  initialDescription: manifest['description'] ?? '',
-                  onTapSave: () {
-                    setState(() {
-                      fetchManifestsAndUpdate();
-                    });
-                  },
-                  onTapArchive: () {
-                    ManifestService().archiveManifest(
-                      context,
-                      manifest['_id'],
-                      () {
+              child: ManifestsTile(
+                title: manifest['name'] ?? 'Unnamed',
+                subtitle: manifest['description'] ?? 'No description',
+                icon: Icons.task,
+                iconSize: 35,
+                holdDownWorking: true,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => LibraryScreen(
+                        pageTitle: manifest['name'] ?? 'Unnamed',
+                        manifestId: manifest['_id'],
+                        entitiesId: (manifest['entities'] as List).isNotEmpty
+                            ? manifest['entities'][0]
+                            : null,
+                      ),
+                    ),
+                  );
+                  focusNode.unfocus();
+                },
+                onLongPress: () {
+                  showManifestSettingsDialog(
+                    context: context,
+                    manifestId: manifest['_id'],
+                    initialName: manifest['name'] ?? 'Unnamed',
+                    initialDescription: manifest['description'] ?? '',
+                    onTapSave: () {
+                      setState(() {
                         fetchManifestsAndUpdate();
-                      },
-                    );
-                  },
-                  onTapExport: () {},
-                );
-              },
+                      });
+                    },
+                    onTapArchive: () {
+                      ManifestService().archiveManifest(
+                        context,
+                        manifest['_id'],
+                            () {
+                          fetchManifestsAndUpdate();
+                        },
+                      );
+                    },
+                    onTapExport: () {},
+                  );
+                },
+              ),
             );
           },
-        ),
+        )
       ),
     );
   }

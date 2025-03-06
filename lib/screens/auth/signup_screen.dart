@@ -3,6 +3,7 @@ import 'package:flutter_pkgscan/widgets/auth_button.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/text_constants.dart';
+import '../../constants/ui_helper.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/back_icon.dart';
 import '../../widgets/custom_fields.dart';
@@ -52,61 +53,31 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          Container(
-            padding: const EdgeInsets.all(55),
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage("assets/images/background_2.png"),
-                fit: BoxFit.cover,
+          _buildBackground(),
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 55, vertical: 30),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildHeader(),
+                  UIHelper.mediumVerticalGap,
+                  _buildTextFields(),
+                  UIHelper.mediumVerticalGap,
+                  isLoading
+                      ? const SpinKitThreeBounce(
+                          color: AppColors.primaryColor,
+                          size: 30.0,
+                        )
+                      : AuthButton(
+                          title: TextConstants.signUp,
+                          onTap: signup,
+                        ),
+                ],
               ),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  TextConstants.register,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: AppColors.primaryColor),
-                ),
-                const SizedBox(height: 7),
-                Text(TextConstants.createYourNewAccount,
-                    style: Theme.of(context).textTheme.displayMedium),
-                const SizedBox(height: 30),
-                CustomField(
-                  Icons.verified_user_outlined,
-                  TextConstants.username,
-                  _nameController,
-                ),
-                const SizedBox(height: 20),
-                CustomField(
-                  Icons.person_2_outlined,
-                  TextConstants.email,
-                  _emailController,
-                ),
-                const SizedBox(height: 20),
-                CustomField(
-                  Icons.lock_outline,
-                  TextConstants.password,
-                  _passwordController,
-                ),
-                const SizedBox(height: 30),
-                isLoading
-                    ? const SpinKitThreeBounce(
-                        color: AppColors.primaryColor,
-                        size: 30.0,
-                      )
-                    : AuthButton(
-                        title: TextConstants.signUp,
-                        onTap: signup,
-                      ),
-              ],
-            ),
           ),
-          Positioned(
+          const Positioned(
             top: 46,
             left: 26,
             child: BackIcon(
@@ -115,6 +86,55 @@ class _SignUpScreenState extends State<SignUpScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBackground() {
+    return Container(
+      decoration: const BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage("assets/images/background_2.png"),
+          fit: BoxFit.cover,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      children: [
+        Text(
+          TextConstants.register,
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: AppColors.primaryColor),
+        ),
+        UIHelper.smallVerticalGap,
+        Text(TextConstants.createYourNewAccount,
+            style: Theme.of(context).textTheme.displayMedium),
+      ],
+    );
+  }
+
+  Widget _buildTextFields() {
+    return Column(
+      children: [
+        CustomField(Icons.verified_user_outlined, TextConstants.username,
+            _nameController,
+            textInputAction: TextInputAction.next,
+            keyboardType: TextInputType.name),
+        UIHelper.smallVerticalGap,
+        CustomField(
+            Icons.person_2_outlined, TextConstants.email, _emailController,
+            textInputAction: TextInputAction.next,
+            keyboardType: TextInputType.emailAddress),
+        UIHelper.smallVerticalGap,
+        CustomField(
+            Icons.lock_outline, TextConstants.password, _passwordController,
+            textInputAction: TextInputAction.done,
+            keyboardType: TextInputType.visiblePassword),
+      ],
     );
   }
 }

@@ -10,7 +10,7 @@ class BarcodeScannerService {
       BuildContext context, String barcode, String entityId) async {
 
     // `addRecord` tamamlanana kadar bekliyoruz
-    await RecordService().addRecord(context, entityId, true, "barcode", barcode);
+    await RecordService().addRecord(context, entityId, true, "barcode", barcode, false, {});
 
     // İşlem tamamlandıktan sonra FALSE döndür ki loader kapansın
     return false;

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_pkgscan/services/auth_service.dart';
 import 'package:flutter_pkgscan/widgets/custom_fields.dart';
 import 'package:flutter_pkgscan/widgets/manifests_tile.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 
 import '../constants/app_colors.dart';
 import '../constants/text_constants.dart';
@@ -28,6 +29,7 @@ class _AccountScreenState extends State<AccountScreen> {
   String userName = 'Loading...';
   String userEmail = 'Loading...';
   bool _isLoading = false;
+  bool isChangePasswordWaiting = false;
   final TextEditingController _passwordController = TextEditingController();
 
   Future<void> deleteAccount() async {
@@ -45,7 +47,11 @@ class _AccountScreenState extends State<AccountScreen> {
         _isLoading = false; // İşlem tamamlandığında loader gizle
       });
       _showSnackbar(message);
-      Navigator.pushNamedAndRemoveUntil(context ,'/signupWith', (Route<dynamic> route) => false,);
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/signUpWithScreen',
+        (Route<dynamic> route) => false,
+      );
     } catch (e) {
       setState(() {
         _isLoading = false; // İşlem tamamlandığında loader gizle
@@ -223,14 +229,22 @@ class _AccountScreenState extends State<AccountScreen> {
         ),
         _buildDivider(),
         _buildTile(
-          icon: Icons.password,
-          title: TextConstants.changePassword,
-          iconColor: AppColors.primaryColor,
-          textColor: AppColors.primaryColor,
-          onTap: () {
-            _authService.forgotPassword(userEmail, context);
-          },
-        ),
+            icon: Icons.password,
+            title: TextConstants.changePassword,
+            iconColor: AppColors.primaryColor,
+            textColor: AppColors.primaryColor,
+            onTap: () async {
+              setState(() {
+                isChangePasswordWaiting = true;
+              });
+
+              await _authService.forgotPassword(userEmail, context);
+
+              setState(() {
+                isChangePasswordWaiting = false;
+              });
+            },
+            isLoading: isChangePasswordWaiting),
         const SizedBox(height: _spacingSmall),
         _buildTile(
           icon: Icons.logout,
@@ -298,7 +312,8 @@ class _AccountScreenState extends State<AccountScreen> {
                               children: [
                                 TextButton(
                                   onPressed: () {
-                                    Navigator.pop(context); // İptal butonuyla popup'ı kapat
+                                    Navigator.pop(
+                                        context); // İptal butonuyla popup'ı kapat
                                   },
                                   child: Text(
                                     TextConstants.cancel,
@@ -353,9 +368,10 @@ class _AccountScreenState extends State<AccountScreen> {
     required Color iconColor,
     required Color textColor,
     required VoidCallback onTap,
+    bool? isLoading,
   }) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: isLoading == false || isLoading == null?onTap:null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         height: 50,
@@ -367,13 +383,18 @@ class _AccountScreenState extends State<AccountScreen> {
           children: [
             Icon(icon, color: iconColor, size: 20),
             const SizedBox(width: 16),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                    color: textColor,
-                    fontWeight: FontWeight.w400,
-                  ),
-            ),
+            isLoading == false || isLoading == null
+                ? Text(
+                    title,
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                          color: textColor,
+                          fontWeight: FontWeight.w400,
+                        ),
+                  )
+                : SpinKitFadingCircle(
+              color: AppColors.primaryColor,
+              size: 25.0,
+            )
           ],
         ),
       ),

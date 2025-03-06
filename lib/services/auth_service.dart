@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_pkgscan/widgets/snack_bar.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -67,20 +68,50 @@ class AuthService {
     }
   }
 
-  Future<void> logout(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('isLoggedIn');
-    await prefs.remove('userEmail');
-    await prefs.remove('name');
-    await prefs.remove('accessToken');
-    await prefs.remove('refreshToken');
+  Future<void> continueAsGuest() async {
 
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/signUpWithScreen',
-      (Route<dynamic> route) => false,
-    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isLoggedIn', true); // Giriş durumu
+    await prefs.setBool('isGuestMode', true); // Giriş durumu
+    await prefs.setString('userEmail', "guest@gmail.com"); // Email adresi
+    await prefs.setString('name', "Guest Mode"); // Kullanıcı Adı
+
   }
+
+
+  Future<void> logout(BuildContext context) async {
+    final String? accessToken = await getValidAccessToken();
+
+    if (accessToken == null) {
+      showSnackBar(context: context, message: 'Access token not found. Please log in again.');
+    }
+
+    final response = await http.get(
+      Uri.parse("${AppConfig.authUrl}/logout"), // API URL'ni buraya ekle
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('isLoggedIn');
+      await prefs.remove('userEmail');
+      await prefs.remove('name');
+      await prefs.remove('accessToken');
+      await prefs.remove('refreshToken');
+
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/signUpWithScreen',
+            (Route<dynamic> route) => false,
+      );
+    } else {
+      showSnackBar(context: context, message: response.body);
+    }
+  }
+
 
   Future<void> forgotPassword(String email, BuildContext context) async {
     final response = await http.post(

@@ -13,7 +13,7 @@ class EntitiesService {
     try {
       final String? accessToken = await AuthService().getValidAccessToken();
       if (accessToken == null) {
-        showSnackBar(context, 'Access token not found. Please log in again.');
+        showSnackBar(context: context, message: 'Access token not found. Please log in again.');
         return null;
       }
 
@@ -33,10 +33,10 @@ class EntitiesService {
 
         return entity; // Veriyi döndür
       } else {
-        showSnackBar(context, 'Failed to fetch manifests.');
+        showSnackBar(context: context, message: 'Failed to fetch manifests.');
       }
     } catch (e) {
-      showSnackBar(context, 'Something went wrong: $e');
+      showSnackBar(context: context, message: 'Something went wrong: $e');
     }
     return null;
   }
@@ -46,7 +46,7 @@ class EntitiesService {
     try {
       final String? accessToken = await AuthService().getValidAccessToken();
       if (accessToken == null) {
-        showSnackBar(context, 'Access token not found. Please log in again.');
+        showSnackBar(context: context, message: 'Access token not found. Please log in again.');
         return null;
       }
 
@@ -68,14 +68,14 @@ class EntitiesService {
             jsonDecode(response.body) as Map<String, dynamic>;
         final entity = data['entity'] as Map<String, dynamic>;
         final successMessage = data['message'] ?? 'Entity updated successfully.';
-        showSnackBar(context, successMessage);
+        showSnackBar(context: context, message: successMessage);
 
         return entity; // Veriyi döndür
       } else {
-        showSnackBar(context, 'Failed to fetch manifests.');
+        showSnackBar(context: context, message: 'Failed to fetch manifests.');
       }
     } catch (e) {
-      showSnackBar(context, 'Something went wrong: $e');
+      showSnackBar(context: context, message: 'Something went wrong: $e');
     }
     return null;
   }

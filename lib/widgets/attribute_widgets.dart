@@ -24,10 +24,11 @@ class AttributeWidgets {
     required Map<String, dynamic> oldImageValues,
     required String header,
     required String entitiesId,
-    required String recordId,
+    required String? recordId,
     required ValueChanged onChanged,
     required VoidCallback onDelete,
     required BuildContext context,
+    required bool isNew,
   }) {
     final String attributeName = attribute['name'];
 
@@ -48,6 +49,7 @@ class AttributeWidgets {
         );
 
       case 'integer':
+      case 'barcode':
         return CustomFieldWithoutIcon(
           label: attributeName,
           controller: controllers[attributeName]!,
@@ -71,6 +73,7 @@ class AttributeWidgets {
           imageValues: imageValues,
           oldImageValues: oldImageValues,
           onDelete: onDelete,
+          isNew: isNew,
         );
 
       default:
@@ -122,8 +125,10 @@ class ImageUploadWidget extends StatefulWidget {
   final Map<String, String> imageValues;
   final Map<String, dynamic> oldImageValues;
   final String entitiesId;
-  final String recordId;
+  final String? recordId;
   final VoidCallback onDelete;
+  final bool isNew;
+
 
   const ImageUploadWidget({
     required this.attributeName,
@@ -132,7 +137,7 @@ class ImageUploadWidget extends StatefulWidget {
     required this.oldImageValues,
     required this.entitiesId,
     required this.recordId,
-    required this.onDelete,
+    required this.onDelete, required this.isNew,
   });
 
   @override
@@ -191,7 +196,7 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
       } else {
         return CustomCenterTitleButton(
           title: "Add Image",
-          onTap: () => handleImageUpload(),
+          onTap: () => handleImageUpload(widget.isNew),
           icon: Icons.image,
           iconColor: Colors.blue,
           titleColor: Colors.blue,
@@ -200,7 +205,7 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
     }
   }
 
-  Future<void> handleImageUpload() async {
+  Future<void> handleImageUpload(bool isNew) async {
     final ImagePicker _picker = ImagePicker();
     final ImageSource? source = await showModalBottomSheet<ImageSource>(
       context: context,
@@ -271,26 +276,26 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
           if (imageUrl != null) {
             debugPrint("Image URL: $imageUrl");
             showSnackBar(
-                context, "Image uploaded successfully! URL: $imageUrl");
+                context: context, message: "Image uploaded successfully! URL: $imageUrl");
 
             // Veritabanını güncelliyoruz
-            RecordService().updateRecord(
+            isNew==false ? RecordService().updateRecord(
               context,
               widget.entitiesId,
               widget.recordId,
               {widget.attributeName: imageUrl},
               widget.oldImageValues,
-            );
+            ):null;
 
             setState(() {
               widget.imageValues[widget.attributeName] = imageUrl;
             });
           } else {
-            showSnackBar(context, 'Image upload failed.');
+            showSnackBar(context: context, message: 'Image upload failed.');
           }
         } catch (e) {
           Navigator.of(context).pop(); // Yükleme diyalogunu kapat
-          showSnackBar(context, "Error during upload: $e");
+          showSnackBar(context: context, message: "Error during upload: $e");
         }
       }
     }

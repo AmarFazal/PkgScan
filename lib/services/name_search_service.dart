@@ -6,11 +6,11 @@ class NameSearchService {
   void onTitleSend(BuildContext context, String title, String entityId) async {
     // RecordService'den gelen mesajı alıyoruz
     final String? data = await RecordService()
-        .addRecord(context, entityId, true, "title", title);
+        .addRecord(context, entityId, true, "title", title, false, {});
 
     if (data != null) {
       // Dönen mesajı gösteriyoruz
-      showSnackBar(context, data);
+      showSnackBar(context: context,message:  data);
     }
   }
 }

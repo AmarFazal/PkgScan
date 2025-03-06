@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter_pkgscan/screens/account_screen.dart';
 import 'package:flutter_pkgscan/widgets/manifests_tile.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_colors.dart';
 import '../constants/text_constants.dart';
 import '../services/auth_service.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
@@ -15,7 +13,37 @@ class MenuScreen extends StatefulWidget {
 }
 
 class _MenuScreenState extends State<MenuScreen> {
+  final AuthService _authService = AuthService();
+  String userName = 'Loading...';
+  String version = 'Loading...';
 
+  @override
+  void initState() {
+    _fetchName();
+    _getVersion();
+    super.initState();
+  }
+
+  Future<void> _fetchName() async {
+    try {
+      final fetchedName = await _authService.getUserName();
+      setState(() {
+        userName = fetchedName ??
+            'No Name Found'; // Gelen veri null ise varsayılan değer
+      });
+    } catch (e) {
+      setState(() {
+        userName = 'Error fetching name';
+      });
+    }
+  }
+
+  Future<void> _getVersion() async {
+    PackageInfo packageInfo = await PackageInfo.fromPlatform();
+    setState(() {
+      version = packageInfo.version; // pubspec.yaml içindeki sürüm
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +64,7 @@ class _MenuScreenState extends State<MenuScreen> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     Text(
-                      TextConstants.userNameUpperCase,
+                      userName,
                       style: Theme.of(context)
                           .textTheme
                           .displayMedium
@@ -46,12 +74,20 @@ class _MenuScreenState extends State<MenuScreen> {
                 )
               ],
             ),
-            Container(
-              height: 50,
-              width: 50,
-              child: const CircleAvatar(
-                backgroundImage: AssetImage('assets/images/avatar.jpg'),
-              ),
+            GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(context, '/accountScreen');
+              },
+              child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                      color: AppColors.secondaryColor,
+                      borderRadius: BorderRadius.circular(100)),
+                  child: const Icon(
+                    Icons.person,
+                    color: AppColors.primaryColor,
+                    size: 25,
+                  )),
             ),
           ],
         ),
@@ -66,7 +102,6 @@ class _MenuScreenState extends State<MenuScreen> {
               ),
               child: ListView(
                 children: [
-                  const SizedBox(height: 20),
                   ManifestsTile(
                     title: TextConstants.account,
                     icon: Icons.person_rounded,
@@ -83,7 +118,7 @@ class _MenuScreenState extends State<MenuScreen> {
                     onTap: () {},
                     holdDownWorking: false,
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 20),
                   Padding(
                     padding: const EdgeInsets.only(left: 25),
                     child: Text(
@@ -94,7 +129,6 @@ class _MenuScreenState extends State<MenuScreen> {
                           ?.copyWith(fontSize: 8.5),
                     ),
                   ),
-                  const SizedBox(height: 10),
                   ManifestsTile(
                     title: TextConstants.maintenance,
                     icon: Icons.engineering_rounded,
@@ -118,6 +152,7 @@ class _MenuScreenState extends State<MenuScreen> {
                   ),
                   ManifestsTile(
                     title: TextConstants.version,
+                    subtitle: version,
                     icon: Icons.code,
                     iconSize: 25,
                     onTap: () {},

@@ -28,12 +28,12 @@ class TextConstants {
   static const String forgotPassword = "Forgot Password";
   static const String signupWith = "Sign up with...";
   static const String continueAsGuest = "Continue as Guest";
-  static const String or = "or...";
+  static const String or = "or";
   static const String register = "Register";
   static const String createYourNewAccount = "Create your new account";
   static const String signIn = "Sign in";
   static const String signUp = "Sign up";
-  static const String dontHaveAccount = "Don’t have account?";
+  static const String createAccount = "Create account";
   static const String alredyHaveAnAccount = "Alredy have an account?";
   static const String logoutButton = "Logout";
   static const String send = "Send";
@@ -61,6 +61,7 @@ class TextConstants {
   static const String deleteYourAccount = "Delete Your Account";
   static const String delete = "Delete";
   static const String title = "Title";
+  static const String tutorials = "Tutorials";
   static const String subtitle = "Subtitle";
   static const String status = "Status";
   static const String lot = "Lot";

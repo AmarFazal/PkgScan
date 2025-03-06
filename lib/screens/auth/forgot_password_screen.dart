@@ -3,6 +3,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 
 import '../../constants/app_colors.dart';
 import '../../constants/text_constants.dart';
+import '../../constants/ui_helper.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/auth_button.dart';
 import '../../widgets/back_icon.dart';
@@ -41,7 +42,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             decoration: const BoxDecoration(
               image: DecorationImage(
                 image: AssetImage("assets/images/background_2.png"),
-                fit: BoxFit.cover, // Görseli ekran boyutuna uyacak şekilde ölçekler
+                fit: BoxFit
+                    .cover, // Görseli ekran boyutuna uyacak şekilde ölçekler
               ),
             ),
             child: Column(
@@ -55,27 +57,28 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       .bodyMedium
                       ?.copyWith(color: AppColors.primaryColor),
                 ),
-                const SizedBox(height: 30),
+                UIHelper.mediumVerticalGap,
                 CustomField(
                   Icons.person_2_outlined,
                   TextConstants.email,
                   _emailController,
+                  textInputAction: TextInputAction.done,
+                  keyboardType: TextInputType.emailAddress,
                 ),
-                const SizedBox(height: 20),
+                UIHelper.mediumVerticalGap,
                 isLoading
-                    ? SpinKitThreeBounce(
-                  color: AppColors.primaryColor,
-                  size: 30.0,
-                ) // Loader gösteriliyor
+                    ? const SpinKitThreeBounce(
+                        color: AppColors.primaryColor,
+                        size: 30.0,
+                      ) // Loader gösteriliyor
                     : AuthButton(
-                  title: TextConstants.send,
-                  onTap: _sendForgotPassword,
-                ),
+                        title: TextConstants.send,
+                        onTap: _sendForgotPassword,
+                      ),
               ],
             ),
           ),
-
-          Positioned(
+          const Positioned(
             top: 46,
             left: 26,
             child: BackIcon(
