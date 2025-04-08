@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const Color primaryColor = Color(0xFF9100EC); // Ana renk
-  static const Color secondaryColor = Color(0xFFF2DEFF);
+  static const Color primaryColor = Color(0xFFD50000); // Ana renk
+  static const Color secondaryColor = Color(0xFFFFDEDE);
   static const Color backgroundColor = Color(0xFFFFFFFF);
   static const Color textColor = Color(0xFF494949);
   static const Color secondaryTextColor = Color(0xFF828282);
@@ -19,20 +19,16 @@ class AppColors {
   static const Color lightGray = Color(0xFFBDBDBD);
   static const Color darkGray = Color(0xFF1E1E1E);
 
-  // Primary Swatch (MaterialColor)
-  static MaterialColor primarySwatch = MaterialColor(
-    0xFF9100EC,
-    <int, Color>{
-      50: Color(0xFFF3E5FF), // Açık ton
-      100: Color(0xFFE1BFFF),
-      200: Color(0xFFCE99FF),
-      300: Color(0xFFBB73FF),
-      400: Color(0xFFA653FF),
-      500: Color(0xFF9100EC), // Ana renk
-      600: Color(0xFF8300D4),
-      700: Color(0xFF7300B8),
-      800: Color(0xFF64009C),
-      900: Color(0xFF4D0075), // Koyu ton
-    },
-  );
+  static MaterialColor primarySwatch = MaterialColor(0xFF9100EC, <int, Color>{
+    50: Color(0xFFFCD1D1),
+    100: Color(0xFFFAB9B9),
+    200: Color(0xFFFA9595),
+    300: Color(0xFFFA7171),
+    400: Color(0xFFFA5151),
+    500: Color(0xFFE70101),
+    600: Color(0xFFD20101),
+    700: Color(0xFFB70202),
+    800: Color(0xFF9B0101),
+    900: Color(0xFF770101),
+  });
 }

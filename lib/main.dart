@@ -52,6 +52,7 @@ class MyApp extends StatelessWidget {
         appBarTheme: const AppBarTheme(
           elevation: 0,
           toolbarHeight: 90,
+          backgroundColor: AppColors.primaryColor
         ),
         primaryColor: AppColors.primaryColor,
         primarySwatch: AppColors.primarySwatch,
@@ -124,7 +125,6 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pkgscan_new/services/auth_service.dart';
+import 'package:flutter_pkgscan_new/widgets/custom_fields.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/app_colors.dart';
 import '../constants/text_constants.dart';
-import '../services/auth_service.dart';
-import '../widgets/custom_fields.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -56,7 +56,7 @@ class _AccountScreenState extends State<AccountScreen> {
       Navigator.pushNamedAndRemoveUntil(
         context,
         '/signUpWithScreen',
-            (Route<dynamic> route) => false,
+        (Route<dynamic> route) => false,
       );
     } catch (e) {
       setState(() {
@@ -173,9 +173,9 @@ class _AccountScreenState extends State<AccountScreen> {
 
   Widget _buildProfileFields() {
     final TextEditingController _userNameController =
-    TextEditingController(text: userName);
+        TextEditingController(text: userName);
     final TextEditingController _emailController =
-    TextEditingController(text: userEmail);
+        TextEditingController(text: userEmail);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -235,24 +235,24 @@ class _AccountScreenState extends State<AccountScreen> {
         ),
         _buildDivider(),
         if(!isGuestMode)...{
-          _buildTile(
-              icon: Icons.password,
-              title: TextConstants.changePassword,
-              iconColor: AppColors.primaryColor,
-              textColor: AppColors.primaryColor,
-              onTap: () async {
-                setState(() {
-                  isChangePasswordWaiting = true;
-                });
+        _buildTile(
+            icon: Icons.password,
+            title: TextConstants.changePassword,
+            iconColor: AppColors.primaryColor,
+            textColor: AppColors.primaryColor,
+            onTap: () async {
+              setState(() {
+                isChangePasswordWaiting = true;
+              });
 
-                await _authService.forgotPassword(userEmail, context);
+              await _authService.forgotPassword(userEmail, context);
 
-                setState(() {
-                  isChangePasswordWaiting = false;
-                });
-              },
-              isLoading: isChangePasswordWaiting),
-          const SizedBox(height: _spacingSmall),},
+              setState(() {
+                isChangePasswordWaiting = false;
+              });
+            },
+            isLoading: isChangePasswordWaiting),
+        const SizedBox(height: _spacingSmall),},
         if(isGuestMode)...{
           _buildTile(
             icon: Icons.login,
@@ -273,18 +273,18 @@ class _AccountScreenState extends State<AccountScreen> {
           onTap: () {
             isGuestMode == false ?
             AuthService().logout(context)
-                : AuthService().logoutGuestMode(context);
+            : AuthService().logoutGuestMode(context);
           },
         ),
         if(!isGuestMode)
           ...{
-            _buildDivider(),
-            _buildTile(
-                icon: Icons.delete_forever_rounded,
-                title: TextConstants.deleteYourAccount,
-                iconColor: AppColors.errorColor,
-                textColor: AppColors.errorColor,
-                onTap: () => showModalBottomSheet(
+        _buildDivider(),
+        _buildTile(
+            icon: Icons.delete_forever_rounded,
+            title: TextConstants.deleteYourAccount,
+            iconColor: AppColors.errorColor,
+            textColor: AppColors.errorColor,
+            onTap: () => showModalBottomSheet(
                   isScrollControlled: true,
                   // Modal'ın boyutunu klavyeye göre ayarlamak için
                   context: context,
@@ -316,12 +316,12 @@ class _AccountScreenState extends State<AccountScreen> {
                                 prefixIconColor: AppColors.primaryColor,
                                 hintText: TextConstants.password,
                                 hintStyle:
-                                Theme.of(context).textTheme.displayMedium,
+                                    Theme.of(context).textTheme.displayMedium,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(30),
                                   // Oval kenarlık
                                   borderSide:
-                                  const BorderSide(color: Colors.grey),
+                                      const BorderSide(color: Colors.grey),
                                 ),
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 20,
@@ -344,8 +344,8 @@ class _AccountScreenState extends State<AccountScreen> {
                                         .textTheme
                                         .displayMedium
                                         ?.copyWith(
-                                      color: AppColors.errorColor,
-                                    ),
+                                          color: AppColors.errorColor,
+                                        ),
                                   ),
                                 ),
                                 TextButton(
@@ -356,8 +356,8 @@ class _AccountScreenState extends State<AccountScreen> {
                                         .textTheme
                                         .displayMedium
                                         ?.copyWith(
-                                      color: AppColors.successColor,
-                                    ),
+                                          color: AppColors.successColor,
+                                        ),
                                   ),
                                 ),
                               ],
@@ -408,12 +408,12 @@ class _AccountScreenState extends State<AccountScreen> {
             const SizedBox(width: 16),
             isLoading == false || isLoading == null
                 ? Text(
-              title,
-              style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                color: textColor,
-                fontWeight: FontWeight.w400,
-              ),
-            )
+                    title,
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                          color: textColor,
+                          fontWeight: FontWeight.w400,
+                        ),
+                  )
                 : SpinKitFadingCircle(
               color: AppColors.primaryColor,
               size: 25.0,

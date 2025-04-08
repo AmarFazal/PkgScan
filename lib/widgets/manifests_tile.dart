@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pkgscan_new/widgets/outlined_custom_tile.dart';
+
 import '../constants/app_colors.dart';
 
 class ManifestsTile extends StatefulWidget {

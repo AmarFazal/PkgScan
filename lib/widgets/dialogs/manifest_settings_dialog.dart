@@ -56,7 +56,7 @@ Future<void> showManifestSettingsDialog({
                     initialDescription,
                     onTapSave,
                     isGuestMode,
-                    manifestBox!,
+                    manifestBox,
                   );
                 },
               ),
@@ -91,7 +91,8 @@ void showEditManifestDialog(
     String initialDescription,
     VoidCallback onTap,
     bool isGuestMode,
-    Box<Manifest> manifestBox) {
+    Box<Manifest>? manifestBox
+    ) {
   final TextEditingController nameController =
       TextEditingController(text: initialName);
   final TextEditingController descriptionController =
@@ -172,20 +173,26 @@ void showEditManifestDialog(
                   TextButton(
                     onPressed: () async {
                       // Verilerinizi kaydedin
-                      isGuestMode == false
-                          ? await ManifestService().editManifest(
-                              context,
-                              manifestId,
-                              nameController.text.trim(),
-                              descriptionController.text.trim(),
-                            )
-                          : ManifestService().editManifestInLocalStorage(
-                              context,
-                              manifestId,
-                              nameController.text,
-                              descriptionController.text,
-                              manifestBox,
-                            );
+                      await ManifestService().editManifest(
+                        context,
+                        manifestId,
+                        nameController.text.trim(),
+                        descriptionController.text.trim(),
+                      );
+                      // isGuestMode == false
+                      //     ? await ManifestService().editManifest(
+                      //         context,
+                      //         manifestId,
+                      //         nameController.text.trim(),
+                      //         descriptionController.text.trim(),
+                      //       )
+                      //     : ManifestService().editManifestInLocalStorage(
+                      //         context,
+                      //         manifestId,
+                      //         nameController.text,
+                      //         descriptionController.text,
+                      //         manifestBox,
+                      //       );
                       Navigator.of(context).pop(); // Diyalog kutusunu kapat
                       onTap();
                     },

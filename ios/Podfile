@@ -1,0 +1,38 @@
+platform :ios, '15.5'
+
+# Disable CocoaPods analytics to speed up builds
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+}
+
+def flutter_installation
+  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'))
+
+  unless File.exist?(generated_xcode_build_settings_path)
+    raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
+  end
+
+  File.foreach(generated_xcode_build_settings_path) do |line|
+    matches = line.match(/FLUTTER_ROOT=(.*)/)
+    ENV['FLUTTER_ROOT'] = matches[1].strip if matches
+  end
+
+  system('flutter', 'pub', 'get')
+end
+
+flutter_installation
+
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), ENV['FLUTTER_ROOT'])
+
+flutter_ios_podfile_setup
+
+target 'Runner' do
+  use_frameworks!
+  use_modular_headers!
+
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+end
