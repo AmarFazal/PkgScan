@@ -7,16 +7,12 @@ workflows:
       flutter: stable
       xcode: latest
     scripts:
-  - name: Get Flutter dependencies
-    script: flutter pub get
+      - name: Get Flutter dependencies
+        script: flutter pub get
 
-  - name: Clean old build
-    script: flutter clean
-
-  - name: Build iOS .ipa
-    script: |
-      flutter build ipa --release \
-        --no-codesign
-
+      - name: Build iOS .ipa
+        script: |
+          flutter build ipa --release \
+            --no-codesign
     artifacts:
       - build/ios/ipa/*.ipa
