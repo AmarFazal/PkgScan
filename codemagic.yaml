@@ -1,0 +1,18 @@
+# codemagic.yaml
+workflows:
+  ios-build:
+    name: iOS Build
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+    scripts:
+      - name: Get Flutter dependencies
+        script: flutter pub get
+
+      - name: Build iOS .ipa
+        script: |
+          flutter build ipa --release \
+            --no-codesign
+    artifacts:
+      - build/ios/ipa/*.ipa
