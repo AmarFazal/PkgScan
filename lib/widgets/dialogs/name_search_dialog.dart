@@ -5,7 +5,7 @@ import 'package:flutter_pkgscan_new/widgets/auth_button.dart';
 import '../../constants/text_constants.dart';
 import '../custom_fields.dart';
 
-Future<void> showNameSearchDialog(BuildContext context, String entityId) {
+Future<void> showNameSearchDialog(BuildContext context, String entityId, String recordRequestId,) {
   TextEditingController searchController = TextEditingController();
   TextEditingController pullingCountController = TextEditingController();
 
@@ -42,7 +42,7 @@ Future<void> showNameSearchDialog(BuildContext context, String entityId) {
                   title: TextConstants.search,
                   onTap: () {
                     NameSearchService()
-                        .onTitleSend(context, searchController.text, entityId);
+                        .onTitleSend(context, searchController.text, entityId, recordRequestId,);
                     Navigator.pop(context);
                   },
                 ),

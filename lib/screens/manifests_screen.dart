@@ -1,10 +1,12 @@
 import 'package:flutter_pkgscan_new/services/manifest_service.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter/material.dart';
 import 'package:flutter_pkgscan_new/widgets/snack_bar.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/adapters.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_colors.dart';
+import '../constants/config.dart';
 import '../constants/icon_list.dart';
 import '../constants/text_constants.dart';
 import '../models/guest_mode/manifest.dart';

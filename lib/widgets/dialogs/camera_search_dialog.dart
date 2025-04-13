@@ -8,6 +8,7 @@ Future<void> showCameraDialog(
   String entityId,
   VoidCallback onRecordAdded, // Callback parametresi
   VoidCallback onAnyAction, // Callback parametresi
+  String recordRequestId,
 ) {
   return showModalBottomSheet(
     isScrollControlled: true,
@@ -19,7 +20,8 @@ Future<void> showCameraDialog(
         child: CameraScreen(
           entityId: entityId,
           onRecordAdded: onRecordAdded, // Callback'i CameraScreen'e ilet
-            onAnyAction: onAnyAction,
+          onAnyAction: onAnyAction,
+          recordRequestId: recordRequestId,
         ),
       );
     },

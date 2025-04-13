@@ -7,10 +7,10 @@ class BarcodeScannerService {
 
   // Barcode tarandığında çalışacak fonksiyon
   Future<bool> onBarcodeScanned(
-      BuildContext context, String barcode, String entityId) async {
+      BuildContext context, String barcode, String entityId, String recordRequestId) async {
 
     // `addRecord` tamamlanana kadar bekliyoruz
-    await RecordService().addRecord(context, entityId, true, "barcode", barcode, false, {});
+    await RecordService().addRecord(context, entityId, true, "barcode", barcode, false, {}, recordRequestId);
 
     // İşlem tamamlandıktan sonra FALSE döndür ki loader kapansın
     return false;

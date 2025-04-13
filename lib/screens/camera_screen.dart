@@ -9,12 +9,14 @@ class CameraScreen extends StatefulWidget {
   final String entityId;
   final VoidCallback onRecordAdded; // Callback ekleyin
   final VoidCallback onAnyAction; // Callback ekleyin
+  final String recordRequestId;
 
   const CameraScreen({
     Key? key,
     required this.entityId,
     required this.onRecordAdded, // Callback parametresi
-    required this.onAnyAction, // Callback parametresi
+    required this.onAnyAction,
+    required this.recordRequestId, // Callback parametresi
   }) : super(key: key);
 
   @override
@@ -33,10 +35,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Future<void> _initializeCamera() async {
     final cameras = await availableCameras();
-    _cameraController = CameraController(
-      cameras.first,
-      ResolutionPreset.high,
-    );
+    _cameraController = CameraController(cameras.first, ResolutionPreset.high);
     await _cameraController?.initialize();
     setState(() {});
   }
@@ -65,8 +64,10 @@ class _CameraScreenState extends State<CameraScreen> {
         Navigator.pop(currentContext);
       }
 
-      final String? imageUrl =
-          await CloudService().uploadPhotoToCloud(currentContext, photo.path);
+      final String? imageUrl = await CloudService().uploadPhotoToCloud(
+        currentContext,
+        photo.path,
+      );
 
       if (imageUrl != null) {
         final String? data = await RecordService().addRecord(
@@ -74,8 +75,10 @@ class _CameraScreenState extends State<CameraScreen> {
           widget.entityId,
           true,
           "image-search",
-          imageUrl, false, {}
-
+          imageUrl,
+          false,
+          {},
+          widget.recordRequestId,
         );
 
         if (data != null && mounted) {

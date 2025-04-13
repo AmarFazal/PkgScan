@@ -10,7 +10,7 @@ import '../auth_button.dart';
 import '../custom_fields.dart';
 
 Future<bool> showBarcodeSearchDialog(
-    BuildContext context, String entityId) async {
+    BuildContext context, String entityId, String recordRequestId) async {
   final BarcodeScannerService barcodeScannerService = BarcodeScannerService();
   final Completer<bool> completer = Completer<bool>();
   bool isProcessing = false;
@@ -95,6 +95,7 @@ Future<bool> showBarcodeSearchDialog(
                                 context,
                                 barcode,
                                 entityId,
+                                      recordRequestId,
                               );
                               completer.complete(result);
                               isProcessing = false;
@@ -113,7 +114,7 @@ Future<bool> showBarcodeSearchDialog(
                         CustomFieldWithoutIcon(
                           label: TextConstants.enterBarcodeCode,
                           controller: textController,
-                          textInputType: TextInputType.number,
+                          textInputType: TextInputType.text,
                         ),
                         SizedBox(
                           width: MediaQuery.of(context).size.width * 0.3,
@@ -135,6 +136,7 @@ Future<bool> showBarcodeSearchDialog(
                                   context,
                                   textController.text,
                                   entityId,
+                                    recordRequestId,
                                 );
                                 completer.complete(result);
                               }

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_pkgscan_new/screens/record_screen.dart';
@@ -9,11 +11,14 @@ import 'package:flutter_pkgscan_new/widgets/snack_bar.dart';
 import 'package:flutter_pkgscan_new/widgets/table_tile.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../../widgets/custom_search_bar.dart';
 import '../../widgets/header_icon.dart';
 import '../constants/app_colors.dart';
+import '../constants/config.dart';
 import '../constants/text_constants.dart';
 import '../services/entities_service.dart';
+import '../services/socket_service.dart';
 import '../utils/scroll_listener_helper.dart';
 import '../utils/scroll_utils.dart';
 import '../widgets/custom_center_title_button.dart';
@@ -72,6 +77,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
   List<String>? fieldsInQuickEditSharedPreferences;
   bool allowLoaderCloseSearched = false;
   List<String> attributeNames = [];
+  late IO.Socket socket;
+  late String recordRequestId;
 
   @override
   void initState() {
@@ -91,6 +98,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       focusNode.unfocus();
     });
+    connectSocket();
   }
 
   @override
@@ -98,22 +106,73 @@ class _LibraryScreenState extends State<LibraryScreen> {
     _scrollHelper.dispose();
     _searchController.dispose();
     focusNode.dispose();
+    socket.dispose(); // veya socket.disconnect();
     super.dispose();
+  }
+
+  connectSocket() async {
+    socket = IO.io(AppConfig.socketUrl, <String, dynamic>{
+      'transports': ['websocket'],
+      'autoConnect': false,
+    });
+    socket.connect();
+    socket.onConnectError((err) => print('Connect error: $err'));
+    socket.onError((err) => print('Socket error: $err'));
+    socket.onConnect((_) async {
+      print('✅ Connected to Socket.IO server');
+      print("Entity ID: ${widget.entitiesId}");
+
+      // Wait and join room
+      socket.emit('join_room', {'room_id': widget.entitiesId});
+    });
+    socket.onDisconnect((_) {
+      print('❌ Socket disconnected');
+    });
+
+    socket.on('join_room_ack', (data) {
+      print('🟢 Join room response: $data');
+      if (data['status'] == "success" &&
+          data['room_id'] == widget.entitiesId &&
+          allRecords != null) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    });
+    socket.on('record_addition_status', (data) {
+      print('📡 Received record_status: $data');
+
+      final record = data['record'];
+      if (record == null || record['data'] == null) {
+        print("⚠️ Hatalı veri yapısı: $data");
+        return;
+      }
+      int insertIndex = allRecords.length;
+
+
+      // UI'yi güncelle
+      if (mounted) {
+        setState(() {
+          allRecords.insert(insertIndex, record); // Yeni kaydı en üste ekle
+        });
+      }
+    });
+
   }
 
   Future<void> _loadData({int? index}) async {
     index != null
         ? await _recordDataService.fetchRecordData(
-            context,
-            widget.entitiesId!,
-            index,
-            _controllers,
-            oldValues,
-            dynamicBooleans,
-            oldBooleanValues,
-            imageValues,
-            combinedList,
-          )
+          context,
+          widget.entitiesId!,
+          index,
+          _controllers,
+          oldValues,
+          dynamicBooleans,
+          oldBooleanValues,
+          imageValues,
+          combinedList,
+        )
         : null;
 
     entity = await _recordDataService.retrieveEntity(
@@ -139,7 +198,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Future<void> _fetchRecords(String search) async {
     final data = await RecordService().retrieveRecords(
-        context, widget.entitiesId ?? 'Somethings went wrong', search);
+      context,
+      widget.entitiesId ?? 'Somethings went wrong',
+      search,
+    );
     setState(() {
       if (data != null && data.isNotEmpty) {
         // Verilerin boş olmadığından emin ol
@@ -147,7 +209,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       } else {
         allRecords = [];
       }
-      isLoading = false; // Yükleme durumu kapat
+      //isLoading = false; // Yükleme durumu kapat
     });
   }
 
@@ -187,32 +249,32 @@ class _LibraryScreenState extends State<LibraryScreen> {
             opacity: _isVisible ? 0.0 : 1.0,
             child: Visibility(
               visible: !_isVisible,
-              child: HeaderIcon(
-                icon: Icons.search,
-                onTap: _scrollToTop,
-              ),
+              child: HeaderIcon(icon: Icons.search, onTap: _scrollToTop),
             ),
           ),
           const SizedBox(width: 16),
           HeaderIcon(
             icon: Icons.file_open_rounded,
             onTap: () {
-              List<dynamic> allData = allRecords
-                  .map((record) => record['data'])
-                  .where((element) =>
-                      element is Map) // Sadece Map türündeki elemanları seç
-                  .toList();
+              List<dynamic> allData =
+                  allRecords
+                      .map((record) => record['data'])
+                      .where(
+                        (element) => element is Map,
+                      ) // Sadece Map türündeki elemanları seç
+                      .toList();
 
-              List<String> allKeys = attributeNames
-                  .where((key) {
-                    // 'Image ', 'MSRP ', 'Title ' ile başlamayan key'leri al
-                    return !(key.startsWith('Image ') ||
-                        key.startsWith('MSRP ') ||
-                        key.startsWith('Keep All Data ') ||
-                        key.startsWith('Title '));
-                  })
-                  .toSet() // Tekrarlayan key'leri filtrele
-                  .toList(); // Listeye çevir
+              List<String> allKeys =
+                  attributeNames
+                      .where((key) {
+                        // 'Image ', 'MSRP ', 'Title ' ile başlamayan key'leri al
+                        return !(key.startsWith('Image ') ||
+                            key.startsWith('MSRP ') ||
+                            key.startsWith('Keep All Data ') ||
+                            key.startsWith('Title '));
+                      })
+                      .toSet() // Tekrarlayan key'leri filtrele
+                      .toList(); // Listeye çevir
 
               showLibrariesExportSheet(context, allKeys, allData);
             },
@@ -300,10 +362,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 const SizedBox(height: 15),
                 Text(
                   TextConstants.noRecords,
-                  style: Theme.of(context)
-                      .textTheme
-                      .displaySmall
-                      ?.copyWith(fontSize: 20, color: AppColors.textColor),
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    fontSize: 20,
+                    color: AppColors.textColor,
+                  ),
                 ),
               ],
             ),
@@ -335,9 +397,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       borderRadius: BorderRadius.circular(25),
                       color: AppColors.secondaryColor,
                     ),
-                    child: const Center(
-                      child: CircularProgressIndicator(),
-                    ),
+                    child: const Center(child: CircularProgressIndicator()),
                   ),
                 );
               }
@@ -350,12 +410,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   final refreshRecords = await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => RecordScreen(
-                        index: index,
-                        entitiesId: widget.entitiesId ?? 'Something went wrong',
-                        isNew: false,
-                        recordId: record['_id'],
-                      ),
+                      builder:
+                          (context) => RecordScreen(
+                            index: index,
+                            entitiesId:
+                                widget.entitiesId ?? 'Something went wrong',
+                            isNew: false,
+                            recordId: record['_id'],
+                          ),
                     ),
                   );
                   focusNode.unfocus();
@@ -367,25 +429,25 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 },
                 child: TweenAnimationBuilder(
                   tween: Tween<Offset>(
-                      begin: const Offset(1, 0), end: Offset.zero),
+                    begin: const Offset(1, 0),
+                    end: Offset.zero,
+                  ),
                   duration: Duration(milliseconds: 300 + (index * 100)),
                   // Her öğeye gecikme
                   curve: Curves.easeOut,
                   builder: (context, Offset offset, child) {
                     return Transform.translate(
-                      offset: offset *
-                          MediaQuery.of(context)
-                              .size
-                              .width, // Sağdan sola kaydırma
+                      offset:
+                          offset *
+                          MediaQuery.of(
+                            context,
+                          ).size.width, // Sağdan sola kaydırma
                       child: TweenAnimationBuilder(
                         tween: Tween<double>(begin: 0, end: 1),
                         duration: const Duration(milliseconds: 500),
                         // Opacity için ayrı animasyon
                         builder: (context, double opacity, child) {
-                          return Opacity(
-                            opacity: opacity,
-                            child: child,
-                          );
+                          return Opacity(opacity: opacity, child: child);
                         },
                         child: child,
                       ),
@@ -396,9 +458,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     subtitle: data['Scrape Status'] ?? 'No Status',
                     lot: (data['MSRP'] ?? 'MSRP').toString(),
                     scrapeStatus: data['Scrape Status'] ?? 'No Status',
-                    image: (data["Pulled Images"]?.isEmpty ?? true)
-                        ? 'https://st4.depositphotos.com/14953852/24787/v/450/depositphotos_247872612-stock-illustration-no-image-available-icon-vector.jpg'
-                        : data["Pulled Images"],
+                    image:
+                        (data["Pulled Images"]?.isEmpty ?? true)
+                            ? 'https://st4.depositphotos.com/14953852/24787/v/450/depositphotos_247872612-stock-illustration-no-image-available-icon-vector.jpg'
+                            : data["Pulled Images"],
                     isLoading: isDeleting,
                     onSwipeLeft: () async {
                       RecordService().archiveRecord(
@@ -410,16 +473,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         },
                       );
                     },
-                    onSwipeRight: localSettings['Active Quick Edit'] == true
-                        ? () {
-                            showQuickEditDialog(
-                              context,
-                              record['_id'],
-                              widget.entitiesId ?? 'Something went wrong',
-                              index,
-                            );
-                          }
-                        : null,
+                    onSwipeRight:
+                        localSettings['Active Quick Edit'] == true
+                            ? () {
+                              showQuickEditDialog(
+                                context,
+                                record['_id'],
+                                widget.entitiesId ?? 'Something went wrong',
+                                index,
+                              );
+                            }
+                            : null,
                   ),
                 ),
               );
@@ -430,6 +494,22 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
+  final Set<String> _usedRecordIds = {};
+
+  String _generateUniqueRecordRequestId() {
+    final random = Random();
+    String id;
+    do {
+      id =
+          List.generate(
+            10,
+            (_) => random.nextInt(10),
+          ).join(); // 10 haneli rakam
+    } while (_usedRecordIds.contains(id));
+    _usedRecordIds.add(id);
+    return id;
+  }
+
   Widget buildBottomNavigationBar() {
     return Container(
       color: AppColors.white,
@@ -437,21 +517,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
         padding: const EdgeInsets.all(9),
         child: Row(
           children: [
-            // HeaderIcon(
-            //   onTap: () {},
-            //   icon: Icons.tune,
-            //   color: AppColors.secondaryColor,
-            // ),
             const Spacer(),
             Text(
               "${allRecords.length} Records",
-              style: Theme.of(context)
-                  .textTheme
-                  .displayMedium
-                  ?.copyWith(fontSize: 12),
+              style: Theme.of(
+                context,
+              ).textTheme.displayMedium?.copyWith(fontSize: 12),
             ),
             const Spacer(),
             HeaderIcon(
+              letter: "A",
+              letterSize: 18,
+              color: AppColors.secondaryColor,
               onTap: () async {
                 setState(() {
                   isAddingRecord = true;
@@ -459,24 +536,24 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
                 // Text search dialog açılıyor ve kapanması bekleniyor
                 await showNameSearchDialog(
-                    context, widget.entitiesId ?? 'Something went wrong');
-
-                // Dialog kapandıktan sonra verileri tekrar fetch et
-                await _fetchRecords('');
+                  context,
+                  widget.entitiesId ?? 'Something went wrong',
+                  _generateUniqueRecordRequestId(),
+                );
 
                 setState(() {
                   isAddingRecord = false;
                 });
               },
-              letter: "A",
-              letterSize: 18,
-              color: AppColors.secondaryColor,
             ),
             const SizedBox(width: 8),
             HeaderIcon(
+              icon: Icons.remove_red_eye,
+              iconSize: 18,
+              color: AppColors.secondaryColor,
               onTap: () async {
                 setState(() {
-                  isAddingRecord = true; // İşlem başladı, loader gözüksün
+                  isAddingRecord = true;
                 });
 
                 await showCameraDialog(
@@ -486,11 +563,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     setState(() {
                       isAddingRecord = false;
                     });
-                    _fetchRecords('');
                   },
                   () {
                     allowLoaderCloseSearched = true;
                   },
+                  _generateUniqueRecordRequestId(),
                 );
 
                 if (mounted &&
@@ -501,15 +578,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     allowLoaderCloseSearched = false;
                   });
                 }
-
-                _fetchRecords('');
               },
-              icon: Icons.remove_red_eye,
-              iconSize: 18,
-              color: AppColors.secondaryColor,
             ),
             const SizedBox(width: 8),
             HeaderIcon(
+              icon: CupertinoIcons.barcode,
+              iconSize: 18,
+              color: AppColors.secondaryColor,
               onTap: () async {
                 setState(() {
                   isAddingRecord = true;
@@ -518,38 +593,37 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 bool scanResult = await showBarcodeSearchDialog(
                   context,
                   widget.entitiesId ?? 'Something went wrong',
+                  _generateUniqueRecordRequestId(),
                 );
 
                 setState(() {
                   isAddingRecord = scanResult;
-                  _fetchRecords('');
                 });
               },
-              icon: CupertinoIcons.barcode,
-              iconSize: 18,
-              color: AppColors.secondaryColor,
             ),
             const SizedBox(width: 8),
             HeaderIcon(
+              icon: Icons.add,
+              color: AppColors.secondaryColor,
               onTap: () async {
                 final refreshRecords = await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => RecordScreen(
-                      entitiesId: widget.entitiesId ?? 'Something went wrong',
-                      isNew: true,
-                    ),
+                    builder:
+                        (context) => RecordScreen(
+                          entitiesId:
+                              widget.entitiesId ?? 'Something went wrong',
+                          isNew: true,
+                        ),
                   ),
                 );
                 focusNode.unfocus();
                 if (refreshRecords == true) {
                   setState(() {
-                    _fetchRecords(''); // İşlem başladı, loader gözüksün
+                    _fetchRecords('');
                   });
                 }
               },
-              icon: Icons.add,
-              color: AppColors.secondaryColor,
             ),
           ],
         ),
@@ -575,7 +649,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
   ) {
     if (oldImageValues[key] != null && oldImageValues[key] != newValue) {
       _recordService.updateRecord(
-          context, entityId, recordId, newValue, oldImageValues);
+        context,
+        entityId,
+        recordId,
+        newValue,
+        oldImageValues,
+      );
       setState(() {
         oldImageValues[key] = newValue; // Make sure to update oldImageValues
         imageValues[key] = newValue[key]; // Make sure to update oldImageValues
@@ -583,30 +662,46 @@ class _LibraryScreenState extends State<LibraryScreen> {
     }
   }
 
-  void checkBooleanForChanges(String key, Map<String, dynamic> newValue,
-      String recordId, String entityId) {
+  void checkBooleanForChanges(
+    String key,
+    Map<String, dynamic> newValue,
+    String recordId,
+    String entityId,
+  ) {
     if (oldBooleanValues[key] != null && oldBooleanValues[key] != newValue) {
       _recordService.updateRecord(
-          context, entityId, recordId, newValue, oldBooleanValues);
+        context,
+        entityId,
+        recordId,
+        newValue,
+        oldBooleanValues,
+      );
       setState(() {
         oldBooleanValues[key] = newValue;
       });
     }
   }
 
-//
+  //
 
   void showQuickEditDialog(
-      BuildContext context, String recordId, String entityId, int index) async {
+    BuildContext context,
+    String recordId,
+    String entityId,
+    int index,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
-    fieldsInQuickEditSharedPreferences =
-        prefs.getStringList('fieldsInQuickEdit');
+    fieldsInQuickEditSharedPreferences = prefs.getStringList(
+      'fieldsInQuickEdit',
+    );
     // async ekledim
-    final fieldsInQuickEdit = entity!['manifest_settings'] != null
-        ? (entity!['manifest_settings']['Fields in Quick Edit'] as List?)
-                ?.cast<String>() ??
-            []
-        : (fieldsInQuickEditSharedPreferences as List?)?.cast<String>() ?? [];
+    final fieldsInQuickEdit =
+        entity!['manifest_settings'] != null
+            ? (entity!['manifest_settings']['Fields in Quick Edit'] as List?)
+                    ?.cast<String>() ??
+                []
+            : (fieldsInQuickEditSharedPreferences as List?)?.cast<String>() ??
+                [];
 
     showModalBottomSheet(
       isScrollControlled: true,
@@ -615,271 +710,338 @@ class _LibraryScreenState extends State<LibraryScreen> {
         bool isLoading = true;
 
         return StatefulBuilder(
-            builder: (BuildContext context, StateSetter setState) {
-          Future<void> loadData() async {
-            await _loadData(index: index);
-            setState(() {
-              isLoading = false;
-            });
-          }
+          builder: (BuildContext context, StateSetter setState) {
+            Future<void> loadData() async {
+              await _loadData(index: index);
+              setState(() {
+                isLoading = false;
+              });
+            }
 
-          loadData();
-          return SizedBox(
-            height: MediaQuery.of(context).size.height * 0.8,
-            child: Padding(
-              padding: EdgeInsets.only(
-                top: 5,
-                left: 16.0,
-                right: 16.0,
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: isLoading?
-            const Center(
-                child: SpinKitCircle(
-                  color: AppColors.primaryColor,
-                  size: 50.0,
-                )):SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(height: 16),
-                      ...entity!['subheaderOrder']?.map<Widget>((header) {
-                        if (header == 'Main Information') {
-                          List filteredAttributes = entity!['groupedAttributes']
-                                  ['Manual Images']
-                              .where((attribute) =>
-                                  fieldsInQuickEdit.contains(attribute['name']))
-                              .toList();
-                          return Column(
-                            children: [
-                              // Main Information için normal attribute'lar
-                              ...entity!['groupedAttributes'][header]
-                                  .where((attribute) =>
-                                      fieldsInQuickEdit.contains(attribute[
-                                          'name'])) // Filtreleme işlemi
-                                  .map<Widget>((attribute) {
-                                return AttributeWidgets.buildAttributeWidget(
-                                  context: context,
-                                  attribute: attribute,
-                                  header: header,
-                                  controllers: _controllers,
-                                  dynamicBooleans: dynamicBooleans,
-                                  imageValues: imageValues,
-                                  oldImageValues: oldImageValues,
-                                  entitiesId: entity!["_id"],
-                                  recordId: recordId,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      dynamicBooleans[attribute['name']] =
-                                          value;
-                                    });
-                                    checkBooleanForChanges(
-                                      attribute['name'],
-                                      {attribute['name']: value},
-                                      recordId,
-                                      entityId,
-                                    );
-                                  },
-                                  onDelete: () {
-                                    setState(() {
-                                      oldImageValues[attribute['name']] =
-                                          imageValues[attribute['name']] = '';
-                                      checkImageForChanges(
-                                        attribute['name'],
-                                        {attribute['name']: ''},
-                                        recordId,
-                                        entityId,
-                                      );
-                                    });
-                                  },
-                                  isNew: false,
-                                );
-                              }).toList(),
-                              filteredAttributes.length > 0
-                                  ? ManualImagesSection(
-                                      entity: entity!,
-                                      imageValues: imageValues,
-                                      oldImageValues: oldImageValues,
-                                      entitiesId: widget.entitiesId!,
-                                      recordId: recordId,
-                                      isLoadingMap: isLoadingMap,
-                                      fetchRecordData: _loadData,
-                                      isNew: false,
-                                    )
-                                  : const SizedBox.shrink()
-                            ],
-                          );
-                        } else if (header == 'Manual Images') {
-                          return const SizedBox.shrink();
-                        } else if (header == 'Online Pulled Listings') {
-                          if (isExpandedList.length < combinedList.length + 1) {
-                            isExpandedList =
-                                List.filled(combinedList.length + 1, true);
-                          }
-
-                          return Column(
-                            children: combinedList
-                                .asMap()
-                                .entries
-                                .map<Widget>((entry) {
-                              int index = entry.key;
-                              int correctIndex = index == 1
-                                  ? 10
-                                  : index == 0
-                                      ? 1
-                                      : index;
-                              Map<String, String> listing = entry.value;
-                              if (fieldsInQuickEdit
-                                  .contains('MSRP $correctIndex')) {
-                                return buildExpandableSection(
-                                  title: 'Pulled Listing ${index + 1}',
-                                  isExpanded: index + 1 < isExpandedList.length
-                                      ? isExpandedList[index + 1]
-                                      : false,
-                                  onToggle: () {
-                                    setState(() {
-                                      if (index + 1 < isExpandedList.length) {
-                                        isExpandedList[index + 1] =
-                                            !isExpandedList[index + 1];
-                                      }
-                                    });
-                                  },
-                                  children: [
-                                    if (fieldsInQuickEdit
-                                            .contains('Image $correctIndex') &&
-                                        listing['image'] != null &&
-                                        listing['image']!.isNotEmpty)
-                                      EntriesImageContainer(
-                                        label: TextConstants.onlineImage,
-                                        imageUrl: listing['image']!,
-                                        onTapExport: () {
-                                          setState(() {
-                                            if (fieldsInQuickEdit
-                                                .contains('Pulled Images')) {
-                                              _controllers['Pulled Images']
-                                                      ?.text =
-                                                  listing['image'] ?? '';
-                                              imageValues['Pulled Images'] =
-                                                  listing['image'] ?? '';
-                                            }
-                                          });
-                                          showSnackBar(
-                                              context: context,
-                                              message: TextConstants
-                                                  .pulledImageUpdatedInMainInformation);
-                                        },
-                                      ),
-
-                                    // ✅ MSRP Dinamik Olarak Ayarlandı
-                                    if (fieldsInQuickEdit
-                                        .contains('MSRP $correctIndex'))
-                                      CustomFieldWithoutIcon(
-                                        label:
-                                            '${TextConstants.msrp} $correctIndex',
-                                        controller: TextEditingController(
-                                            text: listing['msrp']),
-                                        onChanged: (value) {
-                                          _controllers['MSRP $correctIndex']
-                                              ?.text = value;
-                                        },
-                                        onTapExport: () {
-                                          setState(() {
-                                            if (fieldsInQuickEdit
-                                                .contains('MSRP')) {
-                                              _controllers['MSRP']?.text =
-                                                  listing['msrp'] ?? '';
-                                            }
-                                          });
-                                          showSnackBar(
-                                              context: context,
-                                              message: TextConstants
-                                                  .msrpUpdatedInMainInformation);
-                                        },
-                                      ),
-
-                                    // ✅ Title Kontrolü
-                                    if (fieldsInQuickEdit
-                                        .contains('Title $correctIndex'))
-                                      CustomFieldWithoutIcon(
-                                        label:
-                                            '${TextConstants.title} $correctIndex',
-                                        controller: TextEditingController(
-                                            text: listing['title']),
-                                        onChanged: (value) {
-                                          _controllers['Title $correctIndex']
-                                              ?.text = value;
-                                        },
-                                        onTapExport: () {
-                                          setState(() {
-                                            if (fieldsInQuickEdit
-                                                .contains('Title')) {
-                                              _controllers['Title']?.text =
-                                                  listing['title'] ?? '';
-                                            }
-                                          });
-                                          showSnackBar(
-                                              context: context,
-                                              message: TextConstants
-                                                  .titleUpdatedInMainInformation);
-                                        },
-                                      ),
-
-                                    // ✅ Keep All Data Butonu Güncellendi
-                                    if (fieldsInQuickEdit
-                                            .contains('Title $correctIndex') ||
-                                        fieldsInQuickEdit
-                                            .contains('MSRP $correctIndex') ||
-                                        fieldsInQuickEdit
-                                            .contains('Image $correctIndex'))
-                                      CustomCenterTitleButton(
-                                        title: TextConstants.keepAllData,
-                                        icon: Icons.check_circle,
-                                        onTap: () {
-                                          setState(() {
-                                            if (fieldsInQuickEdit
-                                                .contains('Title')) {
-                                              _controllers['Title']?.text =
-                                                  listing['title'] ?? '';
-                                            }
-                                            if (fieldsInQuickEdit
-                                                .contains('MSRP')) {
-                                              _controllers['MSRP']?.text =
-                                                  listing['msrp'] ?? '';
-                                            }
-                                            if (fieldsInQuickEdit
-                                                .contains('Pulled Images')) {
-                                              _controllers['Pulled Images']
-                                                      ?.text =
-                                                  listing['image'] ?? '';
-                                              imageValues['Pulled Images'] =
-                                                  listing['image'] ?? '';
-                                            }
-                                          });
-                                          showSnackBar(
-                                              context: context,
-                                              message: TextConstants
-                                                  .dataUpdatedInMainInformation);
-                                        },
-                                      ),
-                                  ],
-                                  context: context,
-                                );
-                              } else {
-                                return const SizedBox.shrink();
-                              }
-                            }).toList(),
-                          );
-                        }
-
-                        return const SizedBox();
-                      }).toList(),
-                    const SizedBox(height: 8),
-                  ],
+            loadData();
+            return SizedBox(
+              height: MediaQuery.of(context).size.height * 0.8,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  top: 5,
+                  left: 16.0,
+                  right: 16.0,
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
                 ),
+                child:
+                    isLoading
+                        ? const Center(
+                          child: SpinKitCircle(
+                            color: AppColors.primaryColor,
+                            size: 50.0,
+                          ),
+                        )
+                        : SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(height: 16),
+                              ...entity!['subheaderOrder']?.map<Widget>((
+                                header,
+                              ) {
+                                if (header == 'Main Information') {
+                                  List filteredAttributes =
+                                      entity!['groupedAttributes']['Manual Images']
+                                          .where(
+                                            (attribute) => fieldsInQuickEdit
+                                                .contains(attribute['name']),
+                                          )
+                                          .toList();
+                                  return Column(
+                                    children: [
+                                      // Main Information için normal attribute'lar
+                                      ...entity!['groupedAttributes'][header]
+                                          .where(
+                                            (attribute) => fieldsInQuickEdit
+                                                .contains(attribute['name']),
+                                          ) // Filtreleme işlemi
+                                          .map<Widget>((attribute) {
+                                            return AttributeWidgets.buildAttributeWidget(
+                                              context: context,
+                                              attribute: attribute,
+                                              header: header,
+                                              controllers: _controllers,
+                                              dynamicBooleans: dynamicBooleans,
+                                              imageValues: imageValues,
+                                              oldImageValues: oldImageValues,
+                                              entitiesId: entity!["_id"],
+                                              recordId: recordId,
+                                              onChanged: (value) {
+                                                setState(() {
+                                                  dynamicBooleans[attribute['name']] =
+                                                      value;
+                                                });
+                                                checkBooleanForChanges(
+                                                  attribute['name'],
+                                                  {attribute['name']: value},
+                                                  recordId,
+                                                  entityId,
+                                                );
+                                              },
+                                              onDelete: () {
+                                                setState(() {
+                                                  oldImageValues[attribute['name']] =
+                                                      imageValues[attribute['name']] =
+                                                          '';
+                                                  checkImageForChanges(
+                                                    attribute['name'],
+                                                    {attribute['name']: ''},
+                                                    recordId,
+                                                    entityId,
+                                                  );
+                                                });
+                                              },
+                                              isNew: false,
+                                            );
+                                          })
+                                          .toList(),
+                                      filteredAttributes.length > 0
+                                          ? ManualImagesSection(
+                                            entity: entity!,
+                                            imageValues: imageValues,
+                                            oldImageValues: oldImageValues,
+                                            entitiesId: widget.entitiesId!,
+                                            recordId: recordId,
+                                            isLoadingMap: isLoadingMap,
+                                            fetchRecordData: _loadData,
+                                            isNew: false,
+                                          )
+                                          : const SizedBox.shrink(),
+                                    ],
+                                  );
+                                } else if (header == 'Manual Images') {
+                                  return const SizedBox.shrink();
+                                } else if (header == 'Online Pulled Listings') {
+                                  if (isExpandedList.length <
+                                      combinedList.length + 1) {
+                                    isExpandedList = List.filled(
+                                      combinedList.length + 1,
+                                      true,
+                                    );
+                                  }
+
+                                  return Column(
+                                    children:
+                                        combinedList.asMap().entries.map<
+                                          Widget
+                                        >((entry) {
+                                          int index = entry.key;
+                                          int correctIndex =
+                                              index == 1
+                                                  ? 10
+                                                  : index == 0
+                                                  ? 1
+                                                  : index;
+                                          Map<String, String> listing =
+                                              entry.value;
+                                          if (fieldsInQuickEdit.contains(
+                                            'MSRP $correctIndex',
+                                          )) {
+                                            return buildExpandableSection(
+                                              title:
+                                                  'Pulled Listing ${index + 1}',
+                                              isExpanded:
+                                                  index + 1 <
+                                                          isExpandedList.length
+                                                      ? isExpandedList[index +
+                                                          1]
+                                                      : false,
+                                              onToggle: () {
+                                                setState(() {
+                                                  if (index + 1 <
+                                                      isExpandedList.length) {
+                                                    isExpandedList[index + 1] =
+                                                        !isExpandedList[index +
+                                                            1];
+                                                  }
+                                                });
+                                              },
+                                              children: [
+                                                if (fieldsInQuickEdit.contains(
+                                                      'Image $correctIndex',
+                                                    ) &&
+                                                    listing['image'] != null &&
+                                                    listing['image']!
+                                                        .isNotEmpty)
+                                                  EntriesImageContainer(
+                                                    label:
+                                                        TextConstants
+                                                            .onlineImage,
+                                                    imageUrl: listing['image']!,
+                                                    onTapExport: () {
+                                                      setState(() {
+                                                        if (fieldsInQuickEdit
+                                                            .contains(
+                                                              'Pulled Images',
+                                                            )) {
+                                                          _controllers['Pulled Images']
+                                                                  ?.text =
+                                                              listing['image'] ??
+                                                              '';
+                                                          imageValues['Pulled Images'] =
+                                                              listing['image'] ??
+                                                              '';
+                                                        }
+                                                      });
+                                                      showSnackBar(
+                                                        context: context,
+                                                        message:
+                                                            TextConstants
+                                                                .pulledImageUpdatedInMainInformation,
+                                                      );
+                                                    },
+                                                  ),
+
+                                                // ✅ MSRP Dinamik Olarak Ayarlandı
+                                                if (fieldsInQuickEdit.contains(
+                                                  'MSRP $correctIndex',
+                                                ))
+                                                  CustomFieldWithoutIcon(
+                                                    label:
+                                                        '${TextConstants.msrp} $correctIndex',
+                                                    controller:
+                                                        TextEditingController(
+                                                          text: listing['msrp'],
+                                                        ),
+                                                    onChanged: (value) {
+                                                      _controllers['MSRP $correctIndex']
+                                                          ?.text = value;
+                                                    },
+                                                    onTapExport: () {
+                                                      setState(() {
+                                                        if (fieldsInQuickEdit
+                                                            .contains('MSRP')) {
+                                                          _controllers['MSRP']
+                                                                  ?.text =
+                                                              listing['msrp'] ??
+                                                              '';
+                                                        }
+                                                      });
+                                                      showSnackBar(
+                                                        context: context,
+                                                        message:
+                                                            TextConstants
+                                                                .msrpUpdatedInMainInformation,
+                                                      );
+                                                    },
+                                                  ),
+
+                                                // ✅ Title Kontrolü
+                                                if (fieldsInQuickEdit.contains(
+                                                  'Title $correctIndex',
+                                                ))
+                                                  CustomFieldWithoutIcon(
+                                                    label:
+                                                        '${TextConstants.title} $correctIndex',
+                                                    controller:
+                                                        TextEditingController(
+                                                          text:
+                                                              listing['title'],
+                                                        ),
+                                                    onChanged: (value) {
+                                                      _controllers['Title $correctIndex']
+                                                          ?.text = value;
+                                                    },
+                                                    onTapExport: () {
+                                                      setState(() {
+                                                        if (fieldsInQuickEdit
+                                                            .contains(
+                                                              'Title',
+                                                            )) {
+                                                          _controllers['Title']
+                                                                  ?.text =
+                                                              listing['title'] ??
+                                                              '';
+                                                        }
+                                                      });
+                                                      showSnackBar(
+                                                        context: context,
+                                                        message:
+                                                            TextConstants
+                                                                .titleUpdatedInMainInformation,
+                                                      );
+                                                    },
+                                                  ),
+
+                                                // ✅ Keep All Data Butonu Güncellendi
+                                                if (fieldsInQuickEdit.contains(
+                                                      'Title $correctIndex',
+                                                    ) ||
+                                                    fieldsInQuickEdit.contains(
+                                                      'MSRP $correctIndex',
+                                                    ) ||
+                                                    fieldsInQuickEdit.contains(
+                                                      'Image $correctIndex',
+                                                    ))
+                                                  CustomCenterTitleButton(
+                                                    title:
+                                                        TextConstants
+                                                            .keepAllData,
+                                                    icon: Icons.check_circle,
+                                                    onTap: () {
+                                                      setState(() {
+                                                        if (fieldsInQuickEdit
+                                                            .contains(
+                                                              'Title',
+                                                            )) {
+                                                          _controllers['Title']
+                                                                  ?.text =
+                                                              listing['title'] ??
+                                                              '';
+                                                        }
+                                                        if (fieldsInQuickEdit
+                                                            .contains('MSRP')) {
+                                                          _controllers['MSRP']
+                                                                  ?.text =
+                                                              listing['msrp'] ??
+                                                              '';
+                                                        }
+                                                        if (fieldsInQuickEdit
+                                                            .contains(
+                                                              'Pulled Images',
+                                                            )) {
+                                                          _controllers['Pulled Images']
+                                                                  ?.text =
+                                                              listing['image'] ??
+                                                              '';
+                                                          imageValues['Pulled Images'] =
+                                                              listing['image'] ??
+                                                              '';
+                                                        }
+                                                      });
+                                                      showSnackBar(
+                                                        context: context,
+                                                        message:
+                                                            TextConstants
+                                                                .dataUpdatedInMainInformation,
+                                                      );
+                                                    },
+                                                  ),
+                                              ],
+                                              context: context,
+                                            );
+                                          } else {
+                                            return const SizedBox.shrink();
+                                          }
+                                        }).toList(),
+                                  );
+                                }
+
+                                return const SizedBox();
+                              }).toList(),
+                              const SizedBox(height: 8),
+                            ],
+                          ),
+                        ),
               ),
-            ),
-          );
-        });
+            );
+          },
+        );
       },
     ).then((_) {
       _recordDataService.saveRecordData(

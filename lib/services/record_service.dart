@@ -9,7 +9,7 @@ import 'auth_service.dart';
 
 class RecordService {
   // Add Record
-  Future<String?> addRecord(BuildContext context, String entityId, bool isScrape, String scrapeBy, String scrapeValue, bool isBlankRecord, Map<String, dynamic>? newBlankData) async {
+  Future<String?> addRecord(BuildContext context, String entityId, bool isScrape, String scrapeBy, String scrapeValue, bool isBlankRecord, Map<String, dynamic>? newBlankData, String recordRequestId) async {
     final String? accessToken = await AuthService().getValidAccessToken();
 
     if (accessToken == null) {
@@ -28,7 +28,8 @@ class RecordService {
           "entity_id": entityId,
           "is_scrape": isScrape,
           "scrape_by": scrapeBy,
-          "scrape_value": scrapeValue
+          "scrape_value": scrapeValue,
+          "record_request_id": recordRequestId,
         }):json.encode({
           "entity_id": entityId,
           "data": newBlankData,

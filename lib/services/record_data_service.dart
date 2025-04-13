@@ -75,7 +75,7 @@ class RecordDataService {
             "",
             "",
             true,
-            updatedData,
+            updatedData,''
           );
     if (isRecordScreen) Navigator.pop(context, true);
   }
