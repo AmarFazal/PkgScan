@@ -79,6 +79,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
   List<String> attributeNames = [];
   late IO.Socket socket;
   late String recordRequestId;
+  final Set<String> _usedRecordIds = {};
+
+  String _generateUniqueRecordRequestId() {
+    final random = Random();
+    String id;
+    do {
+      id = List.generate(10, (_) => random.nextInt(10)).join();
+    } while (_usedRecordIds.contains(id));
+    return id;
+  }
 
   @override
   void initState() {
@@ -143,12 +153,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
       print('📡 Received record_status: $data');
 
       final record = data['record'];
+      final recordRequestId = data['record_request_id'];
+
+      if (record != null && record is Map<String, dynamic>) {
+        // Eğer _usedRecordIds içinde varsa, çıkar
+        if (_usedRecordIds.contains(recordRequestId)) {
+          _usedRecordIds.remove(recordRequestId);
+          print('🧹 Removed used record_request_id: $recordRequestId');
+          print('Used Record Ids: $_usedRecordIds');
+        }
+      }
       if (record == null || record['data'] == null) {
         print("⚠️ Hatalı veri yapısı: $data");
         return;
       }
       int insertIndex = allRecords.length;
-
 
       // UI'yi güncelle
       if (mounted) {
@@ -157,7 +176,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
         });
       }
     });
-
   }
 
   Future<void> _loadData({int? index}) async {
@@ -384,11 +402,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
           onRefresh: () => _fetchRecords(""),
           child: ListView.builder(
             controller: _scrollController,
-            itemCount: allRecords.length + (isAddingRecord ? 1 : 0),
+            itemCount: allRecords.length + _usedRecordIds.length,
             // Ekstra öğe ekleme
             itemBuilder: (context, index) {
-              if (index == allRecords.length && isAddingRecord) {
-                // Listenin en altına indicator ekle
+              // Eğer bu index, allRecords listesinden sonra geliyorsa, loader tile göster
+              if (index >= allRecords.length) {
                 return Padding(
                   padding: const EdgeInsets.all(16),
                   child: Container(
@@ -494,23 +512,29 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
-  final Set<String> _usedRecordIds = {};
-
-  String _generateUniqueRecordRequestId() {
-    final random = Random();
-    String id;
-    do {
-      id =
-          List.generate(
-            10,
-            (_) => random.nextInt(10),
-          ).join(); // 10 haneli rakam
-    } while (_usedRecordIds.contains(id));
-    _usedRecordIds.add(id);
-    return id;
-  }
-
   Widget buildBottomNavigationBar() {
+    Future<void> handleIconTap(
+      Future<bool?> Function(BuildContext, String, String) dialogFunction,
+    ) async {
+      final id = _generateUniqueRecordRequestId();
+      setState(() {
+        _usedRecordIds.add(id);
+      });
+
+      final result = await dialogFunction(
+        context,
+        widget.entitiesId ?? 'Something went wrong',
+        id,
+      );
+
+      if (result == null || result == false) {
+        // Kullanıcı işlem yapmadan kapattı ya da 'false' döndü
+        setState(() {
+          _usedRecordIds.remove(id);
+        });
+      }
+    }
+
     return Container(
       color: AppColors.white,
       child: Padding(
@@ -529,98 +553,47 @@ class _LibraryScreenState extends State<LibraryScreen> {
               letter: "A",
               letterSize: 18,
               color: AppColors.secondaryColor,
-              onTap: () async {
-                setState(() {
-                  isAddingRecord = true;
-                });
-
-                // Text search dialog açılıyor ve kapanması bekleniyor
-                await showNameSearchDialog(
-                  context,
-                  widget.entitiesId ?? 'Something went wrong',
-                  _generateUniqueRecordRequestId(),
-                );
-
-                setState(() {
-                  isAddingRecord = false;
-                });
-              },
+              onTap: () => handleIconTap(showNameSearchDialog),
             ),
             const SizedBox(width: 8),
             HeaderIcon(
               icon: Icons.remove_red_eye,
               iconSize: 18,
               color: AppColors.secondaryColor,
-              onTap: () async {
-                setState(() {
-                  isAddingRecord = true;
-                });
-
-                await showCameraDialog(
-                  context,
-                  widget.entitiesId ?? 'Something went wrong',
-                  () {
-                    setState(() {
-                      isAddingRecord = false;
-                    });
-                  },
-                  () {
-                    allowLoaderCloseSearched = true;
-                  },
-                  _generateUniqueRecordRequestId(),
-                );
-
-                if (mounted &&
-                    allowLoaderCloseSearched == false &&
-                    isAddingRecord == true) {
-                  setState(() {
-                    isAddingRecord = false;
-                    allowLoaderCloseSearched = false;
-                  });
-                }
-              },
+              onTap: () => handleIconTap(showCameraDialog),
             ),
             const SizedBox(width: 8),
             HeaderIcon(
               icon: CupertinoIcons.barcode,
               iconSize: 18,
               color: AppColors.secondaryColor,
-              onTap: () async {
-                setState(() {
-                  isAddingRecord = true;
-                });
-
-                bool scanResult = await showBarcodeSearchDialog(
-                  context,
-                  widget.entitiesId ?? 'Something went wrong',
-                  _generateUniqueRecordRequestId(),
-                );
-
-                setState(() {
-                  isAddingRecord = scanResult;
-                });
-              },
+              onTap: () => handleIconTap(showBarcodeSearchDialog),
             ),
             const SizedBox(width: 8),
             HeaderIcon(
               icon: Icons.add,
               color: AppColors.secondaryColor,
               onTap: () async {
+                final id = _generateUniqueRecordRequestId();
+                setState(() {
+                  _usedRecordIds.add(id);
+                });
                 final refreshRecords = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder:
                         (context) => RecordScreen(
-                          entitiesId:
-                              widget.entitiesId ?? 'Something went wrong',
+                          entitiesId: widget.entitiesId ?? 'Something went wrong',
                           isNew: true,
+                          recordRequestId: id,
                         ),
                   ),
                 );
                 focusNode.unfocus();
                 if (refreshRecords == true) {
+                  // Kullanıcı işlem yapmadan kapattı ya da 'false' döndü
                   setState(() {
-                    _fetchRecords('');
+                    _usedRecordIds.remove(id);
                   });
                 }
               },
@@ -1053,6 +1026,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         recordId: recordId,
         isNew: false,
         isRecordScreen: false,
+
       );
       Future.delayed(const Duration(seconds: 2), () {
         _fetchRecords("");

@@ -45,14 +45,44 @@ class RecordDataService {
     required Map imageValues,
     required Map oldValues,
     required String entitiesId,
-    required String recordId,
+    required String? recordId,
     required bool isNew,
     required bool isRecordScreen,
+    String? recordRequestId,
   }) {
     Map<String, dynamic> updatedData = controllers.map((key, controller) {
       return MapEntry(key, controller.text);
     });
+    updatedData.forEach((key, value) {
+      if (oldValues.containsKey(key) && oldValues[key] != value) {
+        print('Changed field: $key | OLD: ${oldValues[key]} -> NEW: $value');
+      }
+    });
+    Map<String, dynamic> changedData = {};
+    bool isChanged = false;
 
+    updatedData.forEach((key, value) {
+      // Eğer eski verilerde bu anahtar varsa
+      if (oldValues.containsKey(key)) {
+        // Eski değer ile yeni değeri karşılaştır
+        if (oldValues[key] != value || oldValues[key] == null || oldValues[key] == '') {
+          // Eski değer boşsa veya farklıysa, yeni değeri kaydet
+          changedData[key] = value;
+          isChanged = true;
+        }
+      } else {
+        // Eğer eski değeri hiç yoksa (yani boş bir alan yeni eklenmişse)
+        if (value != null && value != '') {
+          // Eğer yeni değer boş değilse, o zaman kaydet
+          changedData[key] = value;
+          isChanged = true;
+        }
+      }
+    });
+
+    if (isChanged) {
+      changedData["Scrape Status"] = "Customer Updated";
+    }
     imageValues.forEach((key, value) {
       if (value.isNotEmpty) {
         updatedData[key] = value;
@@ -67,7 +97,7 @@ class RecordDataService {
 
     isNew == false
         ? _recordService.updateRecord(
-            context, entitiesId, recordId, updatedData, oldValues)
+            context, entitiesId, recordId, changedData, oldValues)
         : RecordService().addRecord(
             context,
             entitiesId,
@@ -75,7 +105,7 @@ class RecordDataService {
             "",
             "",
             true,
-            updatedData,''
+      changedData,recordRequestId!,
           );
     if (isRecordScreen) Navigator.pop(context, true);
   }

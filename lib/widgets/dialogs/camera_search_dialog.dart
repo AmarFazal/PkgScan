@@ -3,14 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../screens/camera_screen.dart';
 
-Future<void> showCameraDialog(
+Future<bool?> showCameraDialog(
   BuildContext context,
   String entityId,
-  VoidCallback onRecordAdded, // Callback parametresi
-  VoidCallback onAnyAction, // Callback parametresi
   String recordRequestId,
 ) {
-  return showModalBottomSheet(
+  return showModalBottomSheet<bool>(
     isScrollControlled: true,
     context: context,
     builder: (BuildContext context) {
@@ -19,8 +17,6 @@ Future<void> showCameraDialog(
         width: MediaQuery.of(context).size.width,
         child: CameraScreen(
           entityId: entityId,
-          onRecordAdded: onRecordAdded, // Callback'i CameraScreen'e ilet
-          onAnyAction: onAnyAction,
           recordRequestId: recordRequestId,
         ),
       );

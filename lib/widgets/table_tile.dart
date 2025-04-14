@@ -77,7 +77,9 @@ class TableTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             height: 70,
             decoration: BoxDecoration(
-              color: scrapeStatus == 'Scrape Successful'
+              color: scrapeStatus == 'Customer Updated'
+                  ? Colors.yellow.withOpacity(0.5)
+                  :  scrapeStatus == 'Scrape Successful'
                   ? AppColors.successColor.withOpacity(0.5)
                   : scrapeStatus == 'Scrape Failed'
                   ? AppColors.errorColor.withOpacity(0.4)

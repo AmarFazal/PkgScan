@@ -18,6 +18,8 @@ class RecordService {
     }
 
     try {
+      print('Data For New Record: $newBlankData');
+      print('Entity ID For New Record: $entityId');
       final response = await http.post(
         Uri.parse('${AppConfig.recordsUrl}/add-record'),
         headers: {
@@ -32,6 +34,8 @@ class RecordService {
           "record_request_id": recordRequestId,
         }):json.encode({
           "entity_id": entityId,
+          "record_request_id": recordRequestId,
+          "is_scrape": false,
           "data": newBlankData,
         })
       );

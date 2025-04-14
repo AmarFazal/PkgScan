@@ -5,11 +5,15 @@ import 'package:flutter_pkgscan_new/widgets/auth_button.dart';
 import '../../constants/text_constants.dart';
 import '../custom_fields.dart';
 
-Future<void> showNameSearchDialog(BuildContext context, String entityId, String recordRequestId,) {
+Future<bool?> showNameSearchDialog(
+    BuildContext context,
+    String entityId,
+    String recordRequestId,
+    ) {
   TextEditingController searchController = TextEditingController();
   TextEditingController pullingCountController = TextEditingController();
 
-  return showModalBottomSheet(
+  return showModalBottomSheet<bool>(
     isScrollControlled: true,
     context: context,
     builder: (BuildContext context) {
@@ -18,11 +22,9 @@ Future<void> showNameSearchDialog(BuildContext context, String entityId, String 
           left: 16.0,
           right: 16.0,
           top: 16.0,
-          bottom:
-              MediaQuery.of(context).viewInsets.bottom, // Klavyeye göre padding
+          bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
         child: SingleChildScrollView(
-          // İçeriği kaydırılabilir hale getirir
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -31,19 +33,18 @@ Future<void> showNameSearchDialog(BuildContext context, String entityId, String 
                 controller: searchController,
                 textInputType: TextInputType.text,
               ),
-              // CustomFieldWithoutIcon(
-              //   label: TextConstants.howMuchProductWillBePulled,
-              //   controller: pullingCountController,
-              //   textInputType: TextInputType.number,
-              // ),
               SizedBox(
                 width: MediaQuery.of(context).size.width * 0.4,
                 child: AuthButton(
                   title: TextConstants.search,
                   onTap: () {
-                    NameSearchService()
-                        .onTitleSend(context, searchController.text, entityId, recordRequestId,);
-                    Navigator.pop(context);
+                    NameSearchService().onTitleSend(
+                      context,
+                      searchController.text,
+                      entityId,
+                      recordRequestId,
+                    );
+                    Navigator.pop(context, true); // <-- Dikkat buraya!
                   },
                 ),
               ),

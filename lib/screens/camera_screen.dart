@@ -7,15 +7,11 @@ import '../services/cloud_service.dart';
 
 class CameraScreen extends StatefulWidget {
   final String entityId;
-  final VoidCallback onRecordAdded; // Callback ekleyin
-  final VoidCallback onAnyAction; // Callback ekleyin
   final String recordRequestId;
 
   const CameraScreen({
     Key? key,
     required this.entityId,
-    required this.onRecordAdded, // Callback parametresi
-    required this.onAnyAction,
     required this.recordRequestId, // Callback parametresi
   }) : super(key: key);
 
@@ -47,7 +43,6 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
   Future<void> _captureAndUploadPhoto() async {
-    widget.onAnyAction();
     if (_isProcessing || _cameraController == null) return;
 
     setState(() {
@@ -61,7 +56,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
       // Kamera ekranını hemen kapat
       if (mounted) {
-        Navigator.pop(currentContext);
+        Navigator.pop(currentContext, true); // true döndürerek sheet'i kapatıyoruz
       }
 
       final String? imageUrl = await CloudService().uploadPhotoToCloud(
@@ -84,9 +79,6 @@ class _CameraScreenState extends State<CameraScreen> {
         if (data != null && mounted) {
           showSnackBar(context: currentContext, message: data);
         }
-
-        // Callback'i çağır (addRecord tamamlandığında)
-        widget.onRecordAdded();
       } else {
         throw Exception("Failed to get the image URL.");
       }
@@ -95,9 +87,6 @@ class _CameraScreenState extends State<CameraScreen> {
         showSnackBar(context: currentContext, message: "An error occurred: $e");
       }
     } finally {
-      setState(() {
-        _isProcessing = false;
-      });
     }
   }
 

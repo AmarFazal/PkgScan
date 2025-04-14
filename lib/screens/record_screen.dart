@@ -17,6 +17,7 @@ class RecordScreen extends StatefulWidget {
   final String? recordId;
   final int? index;
   final bool isNew;
+  final String? recordRequestId; // only for new records
 
   const RecordScreen({
     super.key,
@@ -24,6 +25,7 @@ class RecordScreen extends StatefulWidget {
     required this.entitiesId,
     this.recordId,
     this.index,
+    this.recordRequestId,
   });
 
   @override
@@ -52,7 +54,7 @@ class _RecordScreenState extends State<RecordScreen> {
     'Manual Images': true,
     'Online Pulled Listings': true,
     'Other Information': true,
-    'Scrape Data': true
+    'Scrape Data': true,
   };
 
   @override
@@ -65,16 +67,16 @@ class _RecordScreenState extends State<RecordScreen> {
   Future<void> _loadData() async {
     widget.isNew == false
         ? allRecords = await _recordDataService.fetchRecordData(
-            context,
-            widget.entitiesId,
-            widget.index,
-            _controllers,
-            oldValues,
-            dynamicBooleans,
-            oldBooleanValues,
-            imageValues,
-            combinedList,
-          )
+          context,
+          widget.entitiesId,
+          widget.index,
+          _controllers,
+          oldValues,
+          dynamicBooleans,
+          oldBooleanValues,
+          imageValues,
+          combinedList,
+        )
         : allRecords = {};
 
     entity = await _recordDataService.retrieveEntity(
@@ -103,15 +105,19 @@ class _RecordScreenState extends State<RecordScreen> {
             Navigator.pop(context);
           },
           onTapSave: () {
+            print('OLD VALUES: $oldValues');
+            print('Controllers: ${_controllers.values}');
+
             _recordDataService.saveRecordData(
               context: context,
               controllers: _controllers,
               imageValues: imageValues,
               oldValues: oldValues,
               entitiesId: widget.entitiesId,
-              recordId: widget.recordId!,
+              recordId: widget.recordId,
               isNew: widget.isNew,
               isRecordScreen: true,
+              recordRequestId: widget.recordRequestId,
             );
             Navigator.of(context).pop(true);
           },
@@ -152,52 +158,58 @@ class _RecordScreenState extends State<RecordScreen> {
                   color: AppColors.backgroundColor,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
                 ),
-                child: entity == null || allRecords == null
-                    ? const Center(
-                        child: SpinKitThreeBounce(
-                            color: AppColors.primaryColor, size: 30.0))
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: entity?['subheaderOrder']?.length ?? 0,
-                        // Item sayısı
-                        itemBuilder: (context, index) {
-                          String header = entity!['subheaderOrder']
-                              [index]; // Her bir başlık
-                          bool isExpanded = expandedSections[header] ?? false;
+                child:
+                    entity == null || allRecords == null
+                        ? const Center(
+                          child: SpinKitThreeBounce(
+                            color: AppColors.primaryColor,
+                            size: 30.0,
+                          ),
+                        )
+                        : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          itemCount: entity?['subheaderOrder']?.length ?? 0,
+                          // Item sayısı
+                          itemBuilder: (context, index) {
+                            String header =
+                                entity!['subheaderOrder'][index]; // Her bir başlık
+                            bool isExpanded = expandedSections[header] ?? false;
 
-                          if (header == 'Main Information') {
-                            return MainInformationSection(
-                              entity: entity!,
-                              imageValues: imageValues,
-                              oldImageValues: oldImageValues,
-                              entitiesId: widget.entitiesId,
-                              recordId: widget.recordId,
-                              header: header,
-                              isExpanded: isExpanded,
-                              onToggle: () => toggleExpansion(header),
-                              controllers: _controllers,
-                              oldBooleanValues: oldBooleanValues,
-                              dynamicBooleans: dynamicBooleans,
-                              isNew: widget.isNew,
-                              manualImage: ManualImagesSection(
+                            if (header == 'Main Information') {
+                              return MainInformationSection(
                                 entity: entity!,
                                 imageValues: imageValues,
                                 oldImageValues: oldImageValues,
                                 entitiesId: widget.entitiesId,
                                 recordId: widget.recordId,
-                                isLoadingMap: isLoadingMap,
-                                fetchRecordData: _loadData,
+                                header: header,
+                                isExpanded: isExpanded,
+                                onToggle: () => toggleExpansion(header),
+                                controllers: _controllers,
+                                oldBooleanValues: oldBooleanValues,
+                                dynamicBooleans: dynamicBooleans,
                                 isNew: widget.isNew,
-                              ),
-                            );
-                          } else if (header == 'Online Pulled Listings') {
-                            if (isExpandedList.length <
-                                combinedList.length + 1) {
-                              isExpandedList =
-                                  List.filled(combinedList.length + 1, true);
-                            }
-                            return widget.isNew == false
-                                ? OnlinePulledListingsSection(
+                                manualImage: ManualImagesSection(
+                                  entity: entity!,
+                                  imageValues: imageValues,
+                                  oldImageValues: oldImageValues,
+                                  entitiesId: widget.entitiesId,
+                                  recordId: widget.recordId,
+                                  isLoadingMap: isLoadingMap,
+                                  fetchRecordData: _loadData,
+                                  isNew: widget.isNew,
+                                ),
+                              );
+                            } else if (header == 'Online Pulled Listings') {
+                              if (isExpandedList.length <
+                                  combinedList.length + 1) {
+                                isExpandedList = List.filled(
+                                  combinedList.length + 1,
+                                  true,
+                                );
+                              }
+                              return widget.isNew == false
+                                  ? OnlinePulledListingsSection(
                                     controllers: _controllers,
                                     imageValues: imageValues,
                                     isExpandedList: isExpandedList,
@@ -205,27 +217,27 @@ class _RecordScreenState extends State<RecordScreen> {
                                     combinedList: combinedList,
                                     onToggle: () => toggleExpansion(header),
                                   )
-                                : SizedBox.shrink();
-                          } else if (header == 'Manual Images') {
-                            return const SizedBox.shrink();
-                          } else {
-                            return AllOtherSections(
-                              entity: entity!,
-                              imageValues: imageValues,
-                              dynamicBooleans: dynamicBooleans,
-                              controllers: _controllers,
-                              oldImageValues: oldImageValues,
-                              oldBooleanValues: oldBooleanValues,
-                              entitiesId: widget.entitiesId,
-                              recordId: widget.recordId,
-                              header: header,
-                              isExpanded: isExpanded,
-                              onToggle: () => toggleExpansion(header),
-                              isNew: widget.isNew,
-                            );
-                          }
-                        },
-                      ),
+                                  : SizedBox.shrink();
+                            } else if (header == 'Manual Images') {
+                              return const SizedBox.shrink();
+                            } else {
+                              return AllOtherSections(
+                                entity: entity!,
+                                imageValues: imageValues,
+                                dynamicBooleans: dynamicBooleans,
+                                controllers: _controllers,
+                                oldImageValues: oldImageValues,
+                                oldBooleanValues: oldBooleanValues,
+                                entitiesId: widget.entitiesId,
+                                recordId: widget.recordId,
+                                header: header,
+                                isExpanded: isExpanded,
+                                onToggle: () => toggleExpansion(header),
+                                isNew: widget.isNew,
+                              );
+                            }
+                          },
+                        ),
               ),
             ),
           ],
