@@ -143,12 +143,18 @@ class RecordService {
   }
 
   // Update Records
-  Future<List<Map<String, dynamic>>> updateRecord(BuildContext context, String entityId, String? recordId, Map<String, dynamic> updatingData, Map currentData) async {
+  Future<bool> updateRecord(
+      BuildContext context,
+      String entityId,
+      String? recordId,
+      Map<String, dynamic> updatingData,
+      Map currentData,
+      ) async {
     final String? accessToken = await AuthService().getValidAccessToken();
 
     if (accessToken == null) {
       showSnackBar(context: context, message: 'Access token not found. Please log in again.');
-      return [];
+      return false;
     }
 
     // Yalnızca değişen verileri bul
@@ -162,11 +168,10 @@ class RecordService {
 
     if (changedData.isEmpty) {
       showSnackBar(context: context, message: 'No changes detected.');
-      return [];
+      return false;
     }
 
     try {
-      // PUT isteği yapılıyor
       final response = await http.put(
         Uri.parse('${AppConfig.recordsUrl}/update/$recordId'),
         headers: {
@@ -179,28 +184,24 @@ class RecordService {
         }),
       );
 
-      // Yanıt formatını kontrol etmeden önce durumu kontrol et
       if (response.statusCode != 200) {
-        final errorMessage =
-            jsonDecode(response.body)['message'] ?? 'An error occurred.';
+        final errorMessage = jsonDecode(response.body)['message'] ?? 'An error occurred.';
         showSnackBar(context: context, message: errorMessage);
-        return [];
+        return false;
       }
 
-      // Yanıtı çözümleyin
       final data = jsonDecode(response.body);
 
-      if (data is List) {
-        return List<Map<String, dynamic>>.from(data);
-      } else if (data is Map) {
-        return [data.cast<String, dynamic>()];
+      if (data is List || data is Map) {
+        return true; // Güncelleme başarılı
       } else {
         showSnackBar(context: context, message: 'Unexpected response format.');
-        return [];
+        return false;
       }
     } catch (e) {
       showSnackBar(context: context, message: 'Something went wrong: $e');
-      return [];
+      return false;
     }
   }
+
 }

@@ -29,6 +29,7 @@ class AttributeWidgets {
     required VoidCallback onDelete,
     required BuildContext context,
     required bool isNew,
+    bool? isMsrpEstimated,
   }) {
     final String attributeName = attribute['name'];
 
@@ -36,6 +37,7 @@ class AttributeWidgets {
     if (!controllers.containsKey(attributeName)) {
       controllers[attributeName] = TextEditingController();
     }
+    print("Arttribute Value: $attribute");
 
     // Attribute türüne göre uygun widget'ı döndür
     switch (attribute['type']) {
@@ -43,18 +45,33 @@ class AttributeWidgets {
       case 'richtext':
       case 'hyperlink':
       case 'real':
-        return CustomFieldWithoutIcon(
-          label: attributeName,
-          controller: controllers[attributeName]!,
-        );
+        if (attribute['name'] == 'MSRP') {
+          return CustomFieldWithoutIcon(
+            isMsrpEstimated: isMsrpEstimated!,
+            label: attributeName,
+            controller: controllers[attributeName]!,
+          );
+        } else {
+          return CustomFieldWithoutIcon(
+            label: attributeName,
+            controller: controllers[attributeName]!,
+          );
+        }
 
       case 'integer':
       case 'barcode':
-        return CustomFieldWithoutIcon(
+        if (attribute['name'] == 'MSRP') {return CustomFieldWithoutIcon(
+          isMsrpEstimated: isMsrpEstimated!,
           label: attributeName,
           controller: controllers[attributeName]!,
           textInputType: TextInputType.number,
-        );
+        );}else{
+          return CustomFieldWithoutIcon(
+            label: attributeName,
+            controller: controllers[attributeName]!,
+            textInputType: TextInputType.number,
+          );
+        }
 
       case 'single_choice':
         return buildSingleChoiceWidget(

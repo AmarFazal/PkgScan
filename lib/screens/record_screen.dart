@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 
@@ -18,6 +20,7 @@ class RecordScreen extends StatefulWidget {
   final int? index;
   final bool isNew;
   final String? recordRequestId; // only for new records
+  final Completer<bool> onComplete;
 
   const RecordScreen({
     super.key,
@@ -25,7 +28,7 @@ class RecordScreen extends StatefulWidget {
     required this.entitiesId,
     this.recordId,
     this.index,
-    this.recordRequestId,
+    this.recordRequestId, required this.onComplete,
   });
 
   @override
@@ -36,7 +39,7 @@ class _RecordScreenState extends State<RecordScreen> {
   bool? isChecked = false;
   final EntitiesService _entitiesService = EntitiesService();
   final RecordService _recordService = RecordService();
-  late RecordDataService _recordDataService;
+  late RecordDataService _recordDataService= RecordDataService(_recordService, _entitiesService);
   final Map<String, TextEditingController> _controllers = {};
   Map<String, dynamic>? entity;
   Map<String, dynamic>? allRecords;
@@ -60,7 +63,6 @@ class _RecordScreenState extends State<RecordScreen> {
   @override
   void initState() {
     super.initState();
-    _recordDataService = RecordDataService(_recordService, _entitiesService);
     _loadData(); // Verileri yüklemek için çağır
   }
 
@@ -104,10 +106,10 @@ class _RecordScreenState extends State<RecordScreen> {
             Navigator.pop(context);
             Navigator.pop(context);
           },
-          onTapSave: () {
-            print('OLD VALUES: $oldValues');
-            print('Controllers: ${_controllers.values}');
 
+          onTapSave: () {
+            Navigator.pop(context, true);
+            Navigator.pop(context);
             _recordDataService.saveRecordData(
               context: context,
               controllers: _controllers,
@@ -118,11 +120,27 @@ class _RecordScreenState extends State<RecordScreen> {
               isNew: widget.isNew,
               isRecordScreen: true,
               recordRequestId: widget.recordRequestId,
-            );
-            Navigator.of(context).pop(true);
+            ).then((result) {
+              if (!widget.onComplete.isCompleted) {
+                widget.onComplete.complete(result); // işlemi açan yere true döndür
+              }
+            });
           },
-        ) ??
-        false;
+        );
+  }
+
+  bool _checkIsMsrpEstimated() {
+    final scrapeStatus = allRecords?['data']['Scrape Status'];
+    final firstShoppingPrice = allRecords?['data']['first_shopping_price'];
+    final msrp = allRecords?['data']['MSRP'];
+    if (scrapeStatus != null &&
+        msrp != null &&
+        firstShoppingPrice != null &&
+        scrapeStatus.toString().trim().toUpperCase() == 'MSRP ESTIMATED' &&
+        msrp == firstShoppingPrice) {
+      return true;
+    }
+    return false;
   }
 
   @override
@@ -154,8 +172,8 @@ class _RecordScreenState extends State<RecordScreen> {
           children: [
             Expanded(
               child: Container(
-                decoration: const BoxDecoration(
-                  color: AppColors.backgroundColor,
+                decoration: BoxDecoration(
+                  color: Colors.white,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
                 ),
                 child:
@@ -189,6 +207,7 @@ class _RecordScreenState extends State<RecordScreen> {
                                 oldBooleanValues: oldBooleanValues,
                                 dynamicBooleans: dynamicBooleans,
                                 isNew: widget.isNew,
+                                isMsrpEstimated: widget.isNew? false : _checkIsMsrpEstimated(),
                                 manualImage: ManualImagesSection(
                                   entity: entity!,
                                   imageValues: imageValues,

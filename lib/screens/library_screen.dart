@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/cupertino.dart';
@@ -172,7 +173,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       // UI'yi güncelle
       if (mounted) {
         setState(() {
-          allRecords.insert(insertIndex, record); // Yeni kaydı en üste ekle
+          allRecords.insert(0, record); // Yeni kaydı en üste ekle
         });
       }
     });
@@ -361,7 +362,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     }
 
     // Eğer allRecords boşsa, kullanıcıya mesaj göster
-    if (allRecords.isEmpty) {
+    if (allRecords.isEmpty && _usedRecordIds.isEmpty) {
       return Expanded(
         child: Container(
           margin: const EdgeInsets.only(top: 5),
@@ -375,6 +376,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               children: [
                 Image.asset(
                   'assets/images/no_manifests.png',
+
                   width: MediaQuery.of(context).size.width * 0.5,
                 ),
                 const SizedBox(height: 15),
@@ -392,6 +394,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
       );
     }
 
+    Set<int> _animatedIndexes = {};
+
     return Expanded(
       child: Container(
         decoration: const BoxDecoration(
@@ -403,12 +407,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
           child: ListView.builder(
             controller: _scrollController,
             itemCount: allRecords.length + _usedRecordIds.length,
-            // Ekstra öğe ekleme
             itemBuilder: (context, index) {
-              // Eğer bu index, allRecords listesinden sonra geliyorsa, loader tile göster
-              if (index >= allRecords.length) {
+              // Loader tile'lar en üstte gösteriliyor
+              if (index < _usedRecordIds.length) {
                 return Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.only(top: 16, left: 16, right: 16),
                   child: Container(
                     height: 70,
                     decoration: BoxDecoration(
@@ -420,242 +423,101 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 );
               }
 
-              final record = allRecords[index];
+              // Doğru index'i hesapla
+              final realIndex = index - _usedRecordIds.length;
+              final record = allRecords[realIndex];
               final data = record['data'];
 
-              return GestureDetector(
+              Widget tile = GestureDetector(
                 onTap: () async {
-                  final refreshRecords = await Navigator.push(
+                  final completer = Completer<bool>();
+                  Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder:
-                          (context) => RecordScreen(
-                            index: index,
-                            entitiesId:
-                                widget.entitiesId ?? 'Something went wrong',
-                            isNew: false,
-                            recordId: record['_id'],
-                          ),
+                      builder: (_) => RecordScreen(
+                        index: realIndex,
+                        entitiesId: widget.entitiesId ?? 'Something went wrong',
+                        isNew: false,
+                        recordId: record['_id'],
+                        onComplete: completer,
+                      ),
                     ),
                   );
+                  bool result = await completer.future;
                   focusNode.unfocus();
-                  if (refreshRecords == true) {
+                  if (result) {
+                    showSnackBar(
+                      context: context,
+                      message: "Record Updated Successfully",
+                    );
                     setState(() {
-                      _fetchRecords(''); // İşlem başladı, loader gözüksün
+                      _fetchRecords('');
                     });
                   }
                 },
-                child: TweenAnimationBuilder(
+                child: TableTile(
+                  title: data['Title'] ?? data['Code'] ?? "No Data",
+                  subtitle: data['Scrape Status'] ?? 'No Status',
+                  lot: (data['MSRP'] ?? 'MSRP').toString(),
+                  scrapeStatus: data['Scrape Status'] ?? 'No Status',
+                  image: (data["Pulled Images"]?.isEmpty ?? true)
+                      ? 'https://st4.depositphotos.com/14953852/24787/v/450/depositphotos_247872612-stock-illustration-no-image-available-icon-vector.jpg'
+                      : data["Pulled Images"],
+                  isLoading: isDeleting,
+                  onSwipeLeft: () async {
+                    RecordService().archiveRecord(
+                      context,
+                      record['_id'],
+                      record['entity_id'],
+                          () {
+                        _fetchRecords('');
+                      },
+                    );
+                  },
+                  onSwipeRight: localSettings['Active Quick Edit'] == true
+                      ? () {
+                    showQuickEditDialog(
+                      context,
+                      record['_id'],
+                      widget.entitiesId ?? 'Something went wrong',
+                      realIndex,
+                    );
+                  }
+                      : null,
+                ),
+              );
+
+              if (_animatedIndexes.contains(index)) {
+                return tile;
+              } else {
+                _animatedIndexes.add(index);
+                return TweenAnimationBuilder<Offset>(
+
                   tween: Tween<Offset>(
                     begin: const Offset(1, 0),
                     end: Offset.zero,
                   ),
-                  duration: Duration(milliseconds: 300 + (index * 100)),
-                  // Her öğeye gecikme
+                  duration: const Duration(milliseconds: 400),
                   curve: Curves.easeOut,
-                  builder: (context, Offset offset, child) {
+                  builder: (context, offset, child) {
                     return Transform.translate(
-                      offset:
-                          offset *
-                          MediaQuery.of(
-                            context,
-                          ).size.width, // Sağdan sola kaydırma
-                      child: TweenAnimationBuilder(
-                        tween: Tween<double>(begin: 0, end: 1),
-                        duration: const Duration(milliseconds: 500),
-                        // Opacity için ayrı animasyon
-                        builder: (context, double opacity, child) {
-                          return Opacity(opacity: opacity, child: child);
-                        },
+                      offset: offset * 30,
+                      child: Opacity(
+                        opacity: 1 - offset.dx.abs(),
                         child: child,
                       ),
                     );
                   },
-                  child: TableTile(
-                    title: data['Title'] ?? data['Code'] ?? "No Data",
-                    subtitle: data['Scrape Status'] ?? 'No Status',
-                    lot: (data['MSRP'] ?? 'MSRP').toString(),
-                    scrapeStatus: data['Scrape Status'] ?? 'No Status',
-                    image:
-                        (data["Pulled Images"]?.isEmpty ?? true)
-                            ? 'https://st4.depositphotos.com/14953852/24787/v/450/depositphotos_247872612-stock-illustration-no-image-available-icon-vector.jpg'
-                            : data["Pulled Images"],
-                    isLoading: isDeleting,
-                    onSwipeLeft: () async {
-                      RecordService().archiveRecord(
-                        context,
-                        allRecords[index]['_id'],
-                        allRecords[index]['entity_id'],
-                        () {
-                          _fetchRecords('');
-                        },
-                      );
-                    },
-                    onSwipeRight:
-                        localSettings['Active Quick Edit'] == true
-                            ? () {
-                              showQuickEditDialog(
-                                context,
-                                record['_id'],
-                                widget.entitiesId ?? 'Something went wrong',
-                                index,
-                              );
-                            }
-                            : null,
-                  ),
-                ),
-              );
+                  child: tile,
+                );
+              }
             },
           ),
         ),
       ),
     );
+
   }
-
-  Widget buildBottomNavigationBar() {
-    Future<void> handleIconTap(
-      Future<bool?> Function(BuildContext, String, String) dialogFunction,
-    ) async {
-      final id = _generateUniqueRecordRequestId();
-      setState(() {
-        _usedRecordIds.add(id);
-      });
-
-      final result = await dialogFunction(
-        context,
-        widget.entitiesId ?? 'Something went wrong',
-        id,
-      );
-
-      if (result == null || result == false) {
-        // Kullanıcı işlem yapmadan kapattı ya da 'false' döndü
-        setState(() {
-          _usedRecordIds.remove(id);
-        });
-      }
-    }
-
-    return Container(
-      color: AppColors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(9),
-        child: Row(
-          children: [
-            const Spacer(),
-            Text(
-              "${allRecords.length} Records",
-              style: Theme.of(
-                context,
-              ).textTheme.displayMedium?.copyWith(fontSize: 12),
-            ),
-            const Spacer(),
-            HeaderIcon(
-              letter: "A",
-              letterSize: 18,
-              color: AppColors.secondaryColor,
-              onTap: () => handleIconTap(showNameSearchDialog),
-            ),
-            const SizedBox(width: 8),
-            HeaderIcon(
-              icon: Icons.remove_red_eye,
-              iconSize: 18,
-              color: AppColors.secondaryColor,
-              onTap: () => handleIconTap(showCameraDialog),
-            ),
-            const SizedBox(width: 8),
-            HeaderIcon(
-              icon: CupertinoIcons.barcode,
-              iconSize: 18,
-              color: AppColors.secondaryColor,
-              onTap: () => handleIconTap(showBarcodeSearchDialog),
-            ),
-            const SizedBox(width: 8),
-            HeaderIcon(
-              icon: Icons.add,
-              color: AppColors.secondaryColor,
-              onTap: () async {
-                final id = _generateUniqueRecordRequestId();
-                setState(() {
-                  _usedRecordIds.add(id);
-                });
-                final refreshRecords = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder:
-                        (context) => RecordScreen(
-                          entitiesId: widget.entitiesId ?? 'Something went wrong',
-                          isNew: true,
-                          recordRequestId: id,
-                        ),
-                  ),
-                );
-                focusNode.unfocus();
-                if (refreshRecords == true) {
-                  // Kullanıcı işlem yapmadan kapattı ya da 'false' döndü
-                  setState(() {
-                    _usedRecordIds.remove(id);
-                  });
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.primaryColor,
-      appBar: buildAppBar(),
-      body: buildBody(),
-      bottomNavigationBar: buildBottomNavigationBar(),
-    );
-  }
-
-  void checkImageForChanges(
-    String key,
-    Map<String, dynamic> newValue,
-    String recordId,
-    String entityId,
-  ) {
-    if (oldImageValues[key] != null && oldImageValues[key] != newValue) {
-      _recordService.updateRecord(
-        context,
-        entityId,
-        recordId,
-        newValue,
-        oldImageValues,
-      );
-      setState(() {
-        oldImageValues[key] = newValue; // Make sure to update oldImageValues
-        imageValues[key] = newValue[key]; // Make sure to update oldImageValues
-      });
-    }
-  }
-
-  void checkBooleanForChanges(
-    String key,
-    Map<String, dynamic> newValue,
-    String recordId,
-    String entityId,
-  ) {
-    if (oldBooleanValues[key] != null && oldBooleanValues[key] != newValue) {
-      _recordService.updateRecord(
-        context,
-        entityId,
-        recordId,
-        newValue,
-        oldBooleanValues,
-      );
-      setState(() {
-        oldBooleanValues[key] = newValue;
-      });
-    }
-  }
-
-  //
 
   void showQuickEditDialog(
     BuildContext context,
@@ -676,12 +538,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
             : (fieldsInQuickEditSharedPreferences as List?)?.cast<String>() ??
                 [];
 
+    bool isLoading = true;
     showModalBottomSheet(
       isScrollControlled: true,
       context: context,
       builder: (BuildContext context) {
-        bool isLoading = true;
-
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {
             Future<void> loadData() async {
@@ -734,7 +595,36 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                                 .contains(attribute['name']),
                                           ) // Filtreleme işlemi
                                           .map<Widget>((attribute) {
+                                            print(
+                                              "Library Screen Allrecords Data: ${allRecords[index]}",
+                                            );
+                                            bool _checkIsMsrpEstimated() {
+                                              final scrapeStatus =
+                                                  allRecords[index]['data']['Scrape Status'];
+                                              final firstShoppingPrice =
+                                                  allRecords[index]['data']['first_shopping_price'];
+                                              final msrp =
+                                                  allRecords[index]['data']['MSRP'];
+                                              print(
+                                                "Scrape Status: $scrapeStatus\n MSRP: $msrp\n First Shopping Price: $firstShoppingPrice",
+                                              );
+                                              if (scrapeStatus != null &&
+                                                  msrp != null &&
+                                                  firstShoppingPrice != null &&
+                                                  scrapeStatus
+                                                          .toString()
+                                                          .trim()
+                                                          .toUpperCase() ==
+                                                      'MSRP ESTIMATED' &&
+                                                  msrp == firstShoppingPrice) {
+                                                return true;
+                                              }
+                                              return false;
+                                            }
+
                                             return AttributeWidgets.buildAttributeWidget(
+                                              isMsrpEstimated:
+                                                  _checkIsMsrpEstimated(),
                                               context: context,
                                               attribute: attribute,
                                               header: header,
@@ -1026,7 +916,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
         recordId: recordId,
         isNew: false,
         isRecordScreen: false,
-
       );
       Future.delayed(const Duration(seconds: 2), () {
         _fetchRecords("");
@@ -1038,5 +927,154 @@ class _LibraryScreenState extends State<LibraryScreen> {
         oldBooleanValues.clear();
       });
     });
+  }
+
+  Widget buildBottomNavigationBar() {
+    Future<void> handleIconTap(
+      Future<bool?> Function(BuildContext, String, String) dialogFunction,
+    ) async {
+      final id = _generateUniqueRecordRequestId();
+      setState(() {
+        _usedRecordIds.add(id);
+      });
+
+      final result = await dialogFunction(
+        context,
+        widget.entitiesId ?? 'Something went wrong',
+        id,
+      );
+
+      if (result == null || result == false) {
+        // Kullanıcı işlem yapmadan kapattı ya da 'false' döndü
+        setState(() {
+          _usedRecordIds.remove(id);
+        });
+      }
+    }
+
+    return Container(
+      color: AppColors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(9),
+        child: Row(
+          children: [
+            const Spacer(),
+            Text(
+              "${allRecords.length} Records",
+              style: Theme.of(
+                context,
+              ).textTheme.displayMedium?.copyWith(fontSize: 12),
+            ),
+            const Spacer(),
+            HeaderIcon(
+              letter: "A",
+              letterSize: 18,
+              color: AppColors.secondaryColor,
+              onTap: () => handleIconTap(showNameSearchDialog),
+            ),
+            const SizedBox(width: 8),
+            HeaderIcon(
+              icon: Icons.remove_red_eye,
+              iconSize: 18,
+              color: AppColors.secondaryColor,
+              onTap: () => handleIconTap(showCameraDialog),
+            ),
+            const SizedBox(width: 8),
+            HeaderIcon(
+              icon: CupertinoIcons.barcode,
+              iconSize: 18,
+              color: AppColors.secondaryColor,
+              onTap: () => handleIconTap(showBarcodeSearchDialog),
+            ),
+            const SizedBox(width: 8),
+            HeaderIcon(
+              icon: Icons.add,
+              color: AppColors.secondaryColor,
+              onTap: () async {
+                final id = _generateUniqueRecordRequestId();
+                setState(() {
+                  _usedRecordIds.add(id);
+                });
+                final refreshRecords = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (context) => RecordScreen(
+                          entitiesId:
+                              widget.entitiesId ?? 'Something went wrong',
+                          isNew: true,
+                          recordRequestId: id,
+                          onComplete: Completer(),
+                        ),
+                  ),
+                );
+                focusNode.unfocus();
+                if (refreshRecords == true) {
+                  // Kullanıcı işlem yapmadan kapattı ya da 'false' döndü
+                  setState(() {
+                    _usedRecordIds.remove(id);
+                  });
+                } else {
+                  setState(() {
+                    _usedRecordIds.remove(id);
+                  });
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.primaryColor,
+      appBar: buildAppBar(),
+      body: buildBody(),
+      bottomNavigationBar: buildBottomNavigationBar(),
+    );
+  }
+
+  void checkImageForChanges(
+    String key,
+    Map<String, dynamic> newValue,
+    String recordId,
+    String entityId,
+  ) {
+    if (oldImageValues[key] != null && oldImageValues[key] != newValue) {
+      _recordService.updateRecord(
+        context,
+        entityId,
+        recordId,
+        newValue,
+        oldImageValues,
+      );
+      setState(() {
+        oldImageValues[key] = newValue; // Make sure to update oldImageValues
+        imageValues[key] = newValue[key]; // Make sure to update oldImageValues
+      });
+    }
+  }
+
+  void checkBooleanForChanges(
+    String key,
+    Map<String, dynamic> newValue,
+    String recordId,
+    String entityId,
+  ) {
+    if (oldBooleanValues[key] != null && oldBooleanValues[key] != newValue) {
+      _recordService.updateRecord(
+        context,
+        entityId,
+        recordId,
+        newValue,
+        oldBooleanValues,
+      );
+      setState(() {
+        oldBooleanValues[key] = newValue;
+      });
+    }
   }
 }

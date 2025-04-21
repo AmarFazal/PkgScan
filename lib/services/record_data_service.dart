@@ -39,7 +39,7 @@ class RecordDataService {
     return null;
   }
 
-  void saveRecordData({
+  Future<bool> saveRecordData({
     required BuildContext context,
     required Map controllers,
     required Map imageValues,
@@ -49,31 +49,28 @@ class RecordDataService {
     required bool isNew,
     required bool isRecordScreen,
     String? recordRequestId,
-  }) {
+  }) async {
     Map<String, dynamic> updatedData = controllers.map((key, controller) {
       return MapEntry(key, controller.text);
     });
+
     updatedData.forEach((key, value) {
       if (oldValues.containsKey(key) && oldValues[key] != value) {
         print('Changed field: $key | OLD: ${oldValues[key]} -> NEW: $value');
       }
     });
+
     Map<String, dynamic> changedData = {};
     bool isChanged = false;
 
     updatedData.forEach((key, value) {
-      // Eğer eski verilerde bu anahtar varsa
       if (oldValues.containsKey(key)) {
-        // Eski değer ile yeni değeri karşılaştır
         if (oldValues[key] != value || oldValues[key] == null || oldValues[key] == '') {
-          // Eski değer boşsa veya farklıysa, yeni değeri kaydet
           changedData[key] = value;
           isChanged = true;
         }
       } else {
-        // Eğer eski değeri hiç yoksa (yani boş bir alan yeni eklenmişse)
         if (value != null && value != '') {
-          // Eğer yeni değer boş değilse, o zaman kaydet
           changedData[key] = value;
           isChanged = true;
         }
@@ -83,6 +80,7 @@ class RecordDataService {
     if (isChanged) {
       changedData["Scrape Status"] = "Customer Updated";
     }
+
     imageValues.forEach((key, value) {
       if (value.isNotEmpty) {
         updatedData[key] = value;
@@ -91,24 +89,36 @@ class RecordDataService {
         }
       }
     });
+
     controllers.forEach((key, controller) {
       updatedData[key] = controller.text;
     });
 
-    isNew == false
-        ? _recordService.updateRecord(
-            context, entitiesId, recordId, changedData, oldValues)
-        : RecordService().addRecord(
-            context,
-            entitiesId,
-            false,
-            "",
-            "",
-            true,
-      changedData,recordRequestId!,
-          );
-    if (isRecordScreen) Navigator.pop(context, true);
+    if (!isNew) {
+      // ✅ BURADA await ve return ekledik
+      return await _recordService.updateRecord(
+        context,
+        entitiesId,
+        recordId,
+        changedData,
+        oldValues,
+      );
+    } else {
+      // Add kısmına dokunmuyoruz, sadece return false dönelim (istersen null da dönebilir)
+      RecordService().addRecord(
+        context,
+        entitiesId,
+        false,
+        "",
+        "",
+        true,
+        changedData,
+        recordRequestId!,
+      );
+      return false; // Ya da: return null; -> ama o zaman tip Future<bool?> olmalı
+    }
   }
+
 
   void prepareCombinedList(
       Map<String, dynamic> data, List<Map<String, String>> combinedList) {

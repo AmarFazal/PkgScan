@@ -35,6 +35,7 @@ Widget CustomFieldWithoutIcon({
   TextInputType textInputType = TextInputType.multiline,
   int? maxLines = null, // Dinamik satır sayısı (varsayılan olarak sınırsız)
   VoidCallback? onTapExport,
+  bool isMsrpEstimated =false,
 }) {
   return Container(
     margin: const EdgeInsets.only(top: 0, bottom: 20),
@@ -54,6 +55,7 @@ Widget CustomFieldWithoutIcon({
             decoration: InputDecoration(
               labelText: label,
               border: InputBorder.none,
+              suffixIcon: isMsrpEstimated ? Icon(Icons.info_outline_rounded,color: AppColors.primaryColor,):SizedBox.shrink()
             ),
           ),
         ),

@@ -19,6 +19,7 @@ class MainInformationSection extends StatefulWidget {
   final VoidCallback onToggle;
   final bool isNew;
   final Widget manualImage;
+  final bool? isMsrpEstimated;
 
   const MainInformationSection({
     super.key,
@@ -33,7 +34,9 @@ class MainInformationSection extends StatefulWidget {
     required this.controllers,
     required this.oldBooleanValues,
     required this.dynamicBooleans,
-    required this.manualImage, required this.isNew,
+    required this.manualImage,
+    required this.isNew,
+    this.isMsrpEstimated,
   });
 
   @override
@@ -51,9 +54,11 @@ class _MainInformationSectionState extends State<MainInformationSection> {
       onToggle: widget.onToggle,
       children: [
         // Main Information için normal attribute'lar
-        ...widget.entity!['groupedAttributes'][widget.header]
-            .map<Widget>((attribute) {
+        ...widget.entity!['groupedAttributes'][widget.header].map<Widget>((
+          attribute,
+        ) {
           return AttributeWidgets.buildAttributeWidget(
+            isMsrpEstimated: widget.isMsrpEstimated,
             context: context,
             attribute: attribute,
             header: widget.header,
@@ -96,7 +101,7 @@ class _MainInformationSectionState extends State<MainInformationSection> {
             },
           );
         }).toList(),
-        widget.manualImage
+        widget.manualImage,
         // Manual Images için yatay kaydırılabilir fotoğraf listesi
       ],
       context: context,
